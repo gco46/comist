@@ -41,7 +41,8 @@ class GetComicsSpider(scrapy.Spider):
         for img_url in response.css(Css.to_images).extract():
             item['image_urls'].append(img_url)
         item['num_images'] = len(item['image_urls'])
-        item['tags'] = response.css(Css.to_tags).extract()
+        tags = response.css(Css.to_tags).extract()
+        item['tags'] = tags[len(tags)//2:]
         item['category'] = response.css(Css.to_category).extract_first()
         cont_list = response.css(Css.to_continuous).extract()
         cont_list = cont_list[len(cont_list) // 2:]
