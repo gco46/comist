@@ -2,11 +2,11 @@
 import scrapy
 from scrapy.spiders import CrawlSpider, Rule
 from scrapy.linkextractors import LinkExtractor
-from ComicCluster.items import ComicImageItem
+from ComicScrapy.items import ComicImageItem
 import urllib
 from pymongo import MongoClient
 import requests
-from ComicCluster.site_data import CssSelectors as Css
+from ComicScrapy.site_data import CssSelectors as Css
 
 
 class GetComicsSpider(scrapy.Spider):

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Scrapy settings for ComicCluster project
+# Scrapy settings for ComicScrapy project
 #
 # For simplicity, this file contains only settings considered important or
 # commonly used. You can find more settings consulting the documentation:
@@ -9,14 +9,14 @@
 #     https://doc.scrapy.org/en/latest/topics/downloader-middleware.html
 #     https://doc.scrapy.org/en/latest/topics/spider-middleware.html
 
-BOT_NAME = 'ComicCluster'
+BOT_NAME = 'ComicScrapy'
 
-SPIDER_MODULES = ['ComicCluster.spiders']
-NEWSPIDER_MODULE = 'ComicCluster.spiders'
+SPIDER_MODULES = ['ComicScrapy.spiders']
+NEWSPIDER_MODULE = 'ComicScrapy.spiders'
 
 
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
-#USER_AGENT = 'ComicCluster (+http://www.yourdomain.com)'
+#USER_AGENT = 'ComicScrapy (+http://www.yourdomain.com)'
 
 # Obey robots.txt rules
 ROBOTSTXT_OBEY = True
@@ -47,13 +47,13 @@ DOWNLOAD_DELAY = 4
 # Enable or disable spider middlewares
 # See https://doc.scrapy.org/en/latest/topics/spider-middleware.html
 # SPIDER_MIDDLEWARES = {
-#    'ComicCluster.middlewares.ComicClusterSpiderMiddleware': 543,
+#    'ComicScrapy.middlewares.ComicScrapySpiderMiddleware': 543,
 # }
 
 # Enable or disable downloader middlewares
 # See https://doc.scrapy.org/en/latest/topics/downloader-middleware.html
 # DOWNLOADER_MIDDLEWARES = {
-#    'ComicCluster.middlewares.ComicClusterDownloaderMiddleware': 543,
+#    'ComicScrapy.middlewares.ComicScrapyDownloaderMiddleware': 543,
 # }
 
 # Enable or disable extensions
@@ -65,12 +65,12 @@ DOWNLOAD_DELAY = 4
 # Configure item pipelines
 # See https://doc.scrapy.org/en/latest/topics/item-pipeline.html
 # ITEM_PIPELINES = {
-#    'ComicCluster.pipelines.ComicClusterPipeline': 300,
+#    'ComicScrapy.pipelines.ComicScrapyPipeline': 300,
 # }
 ITEM_PIPELINES = {
-    'ComicCluster.pipelines.SaveComicPipeline': 500,
-    'ComicCluster.pipelines.MongoPipeline': 300,
-    'ComicCluster.pipelines.SymboliclinkPipeline': 800
+    'ComicScrapy.pipelines.SaveComicPipeline': 500,
+    'ComicScrapy.pipelines.MongoPipeline': 300,
+    'ComicScrapy.pipelines.SymboliclinkPipeline': 800
 }
 IMAGES_STORE = './Comics'
 
