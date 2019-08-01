@@ -19,6 +19,9 @@ requests = "*"
 django = "*"
 pep8 = "*"
 autopep8 = "*"
+torchsummary = "*"
+scikit-image = "*"
+pandas = "*"
 
 [requires]
 python_version = "3.7"
