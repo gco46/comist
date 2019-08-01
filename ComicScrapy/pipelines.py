@@ -12,7 +12,7 @@ from pymongo import MongoClient
 from scrapy.exceptions import DropItem
 import os
 import os.path as osp
-import ComicScrapy.settings as myCfg
+import ComicCluster.settings as myCfg
 
 
 class MongoPipeline(object):
@@ -34,7 +34,7 @@ class MongoPipeline(object):
 
 
 class SymboliclinkPipeline(object):
-    ProjectPath = 'project/ComicScrapy'
+    ProjectPath = 'project/ComicCluster'
     AbsProjectPath = osp.join(osp.expanduser('~'), ProjectPath)
     ComicDir = myCfg.IMAGES_STORE.split("/")[-1]
     NextSym = "next"
