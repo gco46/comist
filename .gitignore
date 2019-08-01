@@ -1,7 +1,7 @@
 Comics/
 .vscode/
 __pycache__/
-readme.md
 lib_test/
 readme.md
-
+.ipynb_checkpoints/
+.gitignore
