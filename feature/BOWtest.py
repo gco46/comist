@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from sklearn.datasets import make_blobs
 from sklearn.preprocessing import LabelBinarizer
-from scipy.spatial.distance import cdist
+from scipy.spatial.distance import cdist, pdist, squareform
 import matplotlib.pyplot as plt
 from joblib import Parallel, delayed
 import cv2
@@ -17,8 +17,8 @@ class KMedoids(object):
         self.lb = LabelBinarizer()
         self.tol = tol
         self.num_loop = 0
-        self.centroids = None
-        self.last_centroids = set([0])
+        self.medoids = None
+        self.last_medoids = set([0])
         self.init = init
         self.metric = metric
         # 初期値探索のみ並列して行う
@@ -32,44 +32,44 @@ class KMedoids(object):
         X : 2D-np.array,  (n_samples, n_dim)
         """
         # 距離行列を指定したmetricで計算
-        self.D = cdist(X, X, self.metric)
+        self.D = squareform(pdist(X, self.metric))
         self.n_samples, n_dim = X.shape
         if self.n_samples < self.n_clusters:
             raise ValueError("number of samples is larger than n_clusters")
 
-        # centroids初期値をinit_search回計算し、最もクラスタ内誤差が
-        # 小さいcentroidsを初期値として使用する
-        # init : list of tuple, [(score, centroids), ...]
+        # medoids初期値をinit_search回計算し、最もクラスタ内誤差が
+        # 小さいmedoidsを初期値として使用する
+        # init : list of tuple, [(score, medoids), ...]
         # length == self.init_search
         inits = Parallel(n_jobs=1)(
-            [delayed(self._init_centroids)() for i in range(self.init_search)])
-        self.centroids = sorted(inits, key=lambda x: x[0])[0][1]
+            [delayed(self._init_medoids)() for i in range(self.init_search)])
+        self.medoids = sorted(inits, key=lambda x: x[0])[0][1]
 
         # fit完了後に最新のラベルを参照できるようにするため、ループの最後に
         # label更新を入れる
         # 一回目(初期値)のlabel更新はループ前で実施
-        tmp_labels = self._make_labels(self.centroids)
+        tmp_labels = self._make_labels(self.medoids)
 
-        # 終了条件：centroidに変化なし  or  ループ回数がmax_iterに到達
+        # 終了条件：medoidに変化なし  or  ループ回数がmax_iterに到達
         while (self.num_loop <= self.max_iter) and self.loop_flag:
             one_hot_labels = self._encode_labels_to_OneHot(tmp_labels)
-            self._update_centroids(one_hot_labels)
-            tmp_labels = self._make_labels(self.centroids)
+            self._update_medoids(one_hot_labels)
+            tmp_labels = self._make_labels(self.medoids)
             self.labels = tmp_labels
             self.num_loop += 1
 
     def get_BOWhistogram(self, X):
-        if self.centroids is None:
+        if self.medoids is None:
             raise AttributeError("This object has not fitted yet, \
                 please do .fit() to training data")
 
         # train dataの距離行列を残しておくためにラッチ、あとから復元
         # (_make_labels()はself.Dを参照するため)
         fitted_data_D = self.D
-        self.D = cdist(X, X, self.metric)
+        self.D = squareform(pdist(X, self.metric))
 
         # test dataがどのクラスタに属するかを計算
-        labels = self._make_labels(self.centroids)
+        labels = self._make_labels(self.medoids)
         # histogram計算、[0]:histogram(非正規化),  [1]:binの境界値を表すarray
         self.hist = np.histogram(labels, bins=self.n_clusters)[0]
         # histogram正規化(サンプル数で除算)
@@ -78,54 +78,54 @@ class KMedoids(object):
         self.D = fitted_data_D
         return self.hist
 
-    def _init_centroids(self):
+    def _init_medoids(self):
         """
-        centroidの初期値を選択する
+        medoidの初期値を選択する
         self.init : "random"   -> 乱数で選択
-                    "kmeans++" -> 初期centroidが近づきすぎないような
+                    "kmeans++" -> 初期medoidが近づきすぎないような
                                   確率分布に従って選択
         """
         if self.init == "kmeans++":
-            centroids = []
+            medoids = []
             for n in range(self.n_clusters):
                 if n == 0:
                     # 最初のセントロイドは乱数で決定する
-                    centroid = np.random.choice(
+                    medoid = np.random.choice(
                         range(self.n_samples), 1, replace=False)
-                    centroids.extend(centroid)
+                    medoids.extend(medoid)
                 else:
                     # 2つ目以降はkmeans++の方法で選択
 
-                    # centroidとして選ばれたサンプル以外から次のcentroidを選ぶ
+                    # medoidとして選ばれたサンプル以外から次のmedoidを選ぶ
                     remained_samples = set(
-                        range(self.n_samples)) - set(centroids)
+                        range(self.n_samples)) - set(medoids)
                     remained_samples = list(remained_samples)
 
-                    # 各サンプルについて最近傍centroidとの距離を計算
-                    distance = np.delete(self.D, centroids, axis=0)
-                    distance = distance[:, centroids]
+                    # 各サンプルについて最近傍medoidとの距離を計算
+                    distance = np.delete(self.D, medoids, axis=0)
+                    distance = distance[:, medoids]
                     min_distance = distance.min(axis=1)
 
-                    # d(x_i)^2 / sum(d(x_i)^2) の確率分布に従い、centroidを選ぶ
+                    # d(x_i)^2 / sum(d(x_i)^2) の確率分布に従い、medoidを選ぶ
                     sqrd_min_distance = min_distance * min_distance
                     probs = sqrd_min_distance / sqrd_min_distance.sum()
-                    centroid = np.random.choice(remained_samples, 1, p=probs)
-                    centroids.extend(centroid)
-            centroids = np.array(centroids)
+                    medoid = np.random.choice(remained_samples, 1, p=probs)
+                    medoids.extend(medoid)
+            medoids = np.array(medoids)
         elif self.init == "random":
-            centroids = np.random.choice(
+            medoids = np.random.choice(
                 range(self.n_samples), self.n_clusters, replace=False)
 
         # 評価を計算
-        score_of_init = self._eval_init(centroids)
-        return (score_of_init, centroids)
+        score_of_init = self._eval_init(medoids)
+        return (score_of_init, medoids)
 
-    def _eval_init(self, centroids):
+    def _eval_init(self, medoids):
         """
         クラスタ内誤差の総和を計算する
-        centroids初期値の評価に使用
+        medoids初期値の評価に使用
         """
-        labels = self._make_labels(centroids)
+        labels = self._make_labels(medoids)
         one_hot_labels = self._encode_labels_to_OneHot(labels)
         D_in_clusters = (one_hot_labels[np.newaxis, :, :] *
                          one_hot_labels[:, np.newaxis, :]).swapaxes(0, 2)
@@ -134,12 +134,12 @@ class KMedoids(object):
         each_sample_D = np.sum(D_in_clusters).sum()
         return each_sample_D
 
-    def _make_labels(self, centroids):
+    def _make_labels(self, medoids):
         """
         サンプルがどのクラスタに所属するかのラベルを計算する
         output: np.array,  self.labels  (shape=(n_samples,))
         """
-        labels = np.argmin(self.D[:, centroids], axis=1)
+        labels = np.argmin(self.D[:, medoids], axis=1)
         return labels
 
     def _encode_labels_to_OneHot(self, labels):
@@ -150,11 +150,11 @@ class KMedoids(object):
             result = self.lb.fit_transform(labels)
         return result
 
-    def _update_centroids(self, one_hot_labels):
+    def _update_medoids(self, one_hot_labels):
         """
         1. それぞれのクラスタ内において、クラスタ内の他のすべての点との距離が
-           最小になる点をcentroidとする
-        2. centroidに変化がなければ終了する(self.loop_flag = False とする)
+           最小になる点をmedoidとする
+        2. medoidに変化がなければ終了する(self.loop_flag = False とする)
         """
         # 各クラスタ内の二点間の距離を計算する
         # D_in_clusters.shape == (n_clusters, n_samples, n_samples), 対象行列
@@ -162,22 +162,25 @@ class KMedoids(object):
                          one_hot_labels[:, np.newaxis, :]).swapaxes(0, 2)
         D_in_clusters = D_in_clusters * self.D[np.newaxis, :, :]
 
-        # 各サンプルをcentroidとしたときの距離の総和が最小となる点を
-        # 新たなcentroidとする
+        # 各サンプルをmedoidとしたときの距離の総和が最小となる点を
+        # 新たなmedoidとする
         each_sample_D = np.sum(D_in_clusters, axis=1)
+        # 最近傍として参照されないmedoidはそのまま次のmedoidとして選択
+        alone_medoid_mask = (each_sample_D.sum(axis=1) == 0).astype(int)
         np.place(each_sample_D, each_sample_D == 0, float("inf"))
-        self.centroids = np.argmin(each_sample_D, axis=1)
+        self.medoids = np.argmin(each_sample_D, axis=1) + \
+            (self.medoids * alone_medoid_mask)
 
         # 終了条件判定
         self._judge_exit_condition()
 
     def _judge_exit_condition(self):
-        unchanged_centroids = self.last_centroids.intersection(
-            set(self.centroids))
-        if len(unchanged_centroids) == self.n_clusters:
+        unchanged_medoids = self.last_medoids.intersection(
+            set(self.medoids))
+        if len(unchanged_medoids) == self.n_clusters:
             self.loop_flag = False
         else:
-            self.last_centroids = set(self.centroids)
+            self.last_medoids = set(self.medoids)
 
 
 def convert_to_bin_feature(X):
@@ -209,7 +212,7 @@ def main():
     img = cv2.imread("test.jpg", 1)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-    step_size = 10
+    step_size = 30
     kp = [cv2.KeyPoint(x, y, step_size)
           for y in range(0, gray.shape[0], step_size)
           for x in range(0, gray.shape[1], step_size)]
@@ -222,10 +225,10 @@ def main():
     print("convert to binary features...")
     X = convert_to_bin_feature(features)
 
-    km = KMedoids(n_clusters=100, n_jobs=1, init_search=5)
+    km = KMedoids(n_clusters=200, n_jobs=1, init_search=5)
     print("KMedoids training...")
     km.fit(X)
-    print(len(km.centroids))
+    print(len(km.medoids))
 
 
 if __name__ == "__main__":
