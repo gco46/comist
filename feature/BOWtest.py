@@ -9,7 +9,7 @@ import cv2
 
 
 class KMedoids(object):
-    def __init__(self, n_clusters, max_iter=300, tol=0, init="kmeans++",
+    def __init__(self, n_clusters, max_iter=50, tol=0, init="kmeans++",
                  metric="euclidean", n_jobs=-1, init_search=5, mem_save=False):
         # クラスタ数
         self.n_clusters = n_clusters
@@ -68,7 +68,7 @@ class KMedoids(object):
         tmp_labels = self._make_labels(self.medoids)
 
         # 終了条件：medoidに変化なし  or  ループ回数がmax_iterに到達
-        print("train medoids...")
+        print("train model...")
         while (self.num_loop <= self.max_iter) and self.loop_flag:
             one_hot_labels = self._encode_labels_to_OneHot(tmp_labels)
             self._update_medoids(one_hot_labels)
@@ -262,15 +262,15 @@ def main():
           for x in range(0, gray.shape[1], step_size)]
     img = cv2.drawKeypoints(gray, kp, img)
 
-    orb = cv2.ORB_create(edgeThreshold=0)
+    orb = cv2.ORB_create(edgeThreshold=0, patchSize=50)
     print("feature extracting...")
     keypoints, features = orb.compute(gray, kp)
     print("num of features:{0}".format(features.shape[0]))
     print("convert to binary features...")
     X = convert_to_bin_feature(features)
 
-    km = KMedoids(n_clusters=10, n_jobs=-1, init_search=5,
-                  mem_save=True, init="random")
+    km = KMedoids(n_clusters=100, n_jobs=-1, init_search=5,
+                  mem_save=True, init="kmeans++")
     print("KMedoids training...")
     km.fit(X)
     print(len(km.medoids))
