@@ -53,8 +53,13 @@ class KMedoids(object):
         # 小さいmedoidsを初期値として使用する
         # init : list of tuple, [(score, medoids), ...]
         # length == self.init_search
-        inits = Parallel(n_jobs=1)(
+        print("initialize medoids...")
+        # inits = []
+        # for i in range(self.init_search):
+        #     inits.append(self._init_medoids())
+        inits = Parallel(n_jobs=self.n_jobs)(
             [delayed(self._init_medoids)() for i in range(self.init_search)])
+        print("initialize done.")
         self.medoids = sorted(inits, key=lambda x: x[0])[0][1]
 
         # fit完了後に最新のラベルを参照できるようにするため、ループの最後に
@@ -63,12 +68,14 @@ class KMedoids(object):
         tmp_labels = self._make_labels(self.medoids)
 
         # 終了条件：medoidに変化なし  or  ループ回数がmax_iterに到達
+        print("train medoids...")
         while (self.num_loop <= self.max_iter) and self.loop_flag:
             one_hot_labels = self._encode_labels_to_OneHot(tmp_labels)
             self._update_medoids(one_hot_labels)
             tmp_labels = self._make_labels(self.medoids)
             self.labels = tmp_labels
             self.num_loop += 1
+        print("done.")
 
     def get_BOWhistogram(self, X):
         if self.medoids is None:
@@ -139,11 +146,20 @@ class KMedoids(object):
         """
         labels = self._make_labels(medoids)
         one_hot_labels = self._encode_labels_to_OneHot(labels)
-        D_in_clusters = (one_hot_labels[np.newaxis, :, :] *
-                         one_hot_labels[:, np.newaxis, :]).swapaxes(0, 2)
-        D_in_clusters = D_in_clusters * self.D[np.newaxis, :, :]
-
-        each_sample_D = np.sum(D_in_clusters).sum()
+        if self.mem_save:
+            each_sample_D = 0
+            for n in range(self.n_clusters):
+                label_vec = one_hot_labels[:, n]
+                D_in_clusters = label_vec[np.newaxis, :] * \
+                    label_vec[:, np.newaxis]
+                D_in_clusters = D_in_clusters * self.D
+                each_sample_D_clst = D_in_clusters.sum()
+                each_sample_D += each_sample_D_clst
+        else:
+            D_in_clusters = (one_hot_labels[np.newaxis, :, :] *
+                             one_hot_labels[:, np.newaxis, :]).swapaxes(0, 2)
+            D_in_clusters = D_in_clusters * self.D[np.newaxis, :, :]
+            each_sample_D = np.sum(D_in_clusters).sum()
         return each_sample_D
 
     def _make_labels(self, medoids):
@@ -253,10 +269,12 @@ def main():
     print("convert to binary features...")
     X = convert_to_bin_feature(features)
 
-    km = KMedoids(n_clusters=200, n_jobs=1, init_search=5, mem_save=True)
+    km = KMedoids(n_clusters=10, n_jobs=-1, init_search=5,
+                  mem_save=True, init="random")
     print("KMedoids training...")
     km.fit(X)
     print(len(km.medoids))
+    print(km.num_loop)
 
 
 if __name__ == "__main__":
