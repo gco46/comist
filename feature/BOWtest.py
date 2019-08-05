@@ -10,21 +10,33 @@ import cv2
 
 class KMedoids(object):
     def __init__(self, n_clusters, max_iter=300, tol=0, init="kmeans++",
-                 metric="euclidean", n_jobs=-1, init_search=5):
+                 metric="euclidean", n_jobs=-1, init_search=5, mem_save=False):
+        # クラスタ数
         self.n_clusters = n_clusters
+        # medoidを更新する最大回数
         self.max_iter = max_iter
+        # loop終了フラグ
         self.loop_flag = True
+        # one-hot表現のラベル取得に使用
         self.lb = LabelBinarizer()
+        # tolerance(未実装、現状medoids群の変化有無で終了判定する)
         self.tol = tol
+        # medoidを更新した回数
         self.num_loop = 0
         self.medoids = None
+        # 直前のmedoids集合
         self.last_medoids = set([0])
+        # medoids初期値をどのように決定するか
         self.init = init
+        # サンプル間距離の計算方法
         self.metric = metric
         # 初期値探索のみ並列して行う
         self.n_jobs = n_jobs
         # 初期値探索する回数
         self.init_search = init_search
+        # Falseなら行列演算によりmedoids更新を行う(メモリ消費大)
+        # Trueならn_clustersについてforループでmedoids更新する
+        self.mem_save = mem_save
 
     def fit(self, X):
         """
@@ -156,20 +168,36 @@ class KMedoids(object):
            最小になる点をmedoidとする
         2. medoidに変化がなければ終了する(self.loop_flag = False とする)
         """
-        # 各クラスタ内の二点間の距離を計算する
-        # D_in_clusters.shape == (n_clusters, n_samples, n_samples), 対象行列
-        D_in_clusters = (one_hot_labels[np.newaxis, :, :] *
-                         one_hot_labels[:, np.newaxis, :]).swapaxes(0, 2)
-        D_in_clusters = D_in_clusters * self.D[np.newaxis, :, :]
+        if self.mem_save:
+            tmp_medoids = []
+            for n in range(self.n_clusters):
+                label_vec = one_hot_labels[:, n]
+                D_in_clusters = label_vec[None, :] * label_vec[:, None]
+                D_in_clusters = D_in_clusters * self.D
 
-        # 各サンプルをmedoidとしたときの距離の総和が最小となる点を
-        # 新たなmedoidとする
-        each_sample_D = np.sum(D_in_clusters, axis=1)
-        # 最近傍として参照されないmedoidはそのまま次のmedoidとして選択
-        alone_medoid_mask = (each_sample_D.sum(axis=1) == 0).astype(int)
-        np.place(each_sample_D, each_sample_D == 0, float("inf"))
-        self.medoids = np.argmin(each_sample_D, axis=1) + \
-            (self.medoids * alone_medoid_mask)
+                each_sample_D = np.sum(D_in_clusters, axis=1)
+                if each_sample_D.sum() == 0:
+                    tmp_medoids.append(self.medoids[n])
+                    continue
+                else:
+                    np.place(each_sample_D, each_sample_D == 0, float("inf"))
+                    tmp_medoids.append(np.argmin(each_sample_D))
+            self.medoids = np.array(tmp_medoids)
+        else:
+            # 各クラスタ内の二点間の距離を計算する
+            # D_in_clusters.shape == (n_clusters, n_samples, n_samples), 対象行列
+            D_in_clusters = (one_hot_labels[np.newaxis, :, :] *
+                             one_hot_labels[:, np.newaxis, :]).swapaxes(0, 2)
+            D_in_clusters = D_in_clusters * self.D[np.newaxis, :, :]
+
+            # 各サンプルをmedoidとしたときの距離の総和が最小となる点を
+            # 新たなmedoidとする
+            each_sample_D = np.sum(D_in_clusters, axis=1)
+            # 最近傍として参照されないmedoidはそのまま次のmedoidとして選択
+            alone_medoid_mask = (each_sample_D.sum(axis=1) == 0).astype(int)
+            np.place(each_sample_D, each_sample_D == 0, float("inf"))
+            self.medoids = np.argmin(each_sample_D, axis=1) + \
+                (self.medoids * alone_medoid_mask)
 
         # 終了条件判定
         self._judge_exit_condition()
@@ -212,7 +240,7 @@ def main():
     img = cv2.imread("test.jpg", 1)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-    step_size = 30
+    step_size = 10
     kp = [cv2.KeyPoint(x, y, step_size)
           for y in range(0, gray.shape[0], step_size)
           for x in range(0, gray.shape[1], step_size)]
@@ -225,7 +253,7 @@ def main():
     print("convert to binary features...")
     X = convert_to_bin_feature(features)
 
-    km = KMedoids(n_clusters=200, n_jobs=1, init_search=5)
+    km = KMedoids(n_clusters=200, n_jobs=1, init_search=5, mem_save=True)
     print("KMedoids training...")
     km.fit(X)
     print(len(km.medoids))
