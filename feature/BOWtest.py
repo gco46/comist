@@ -253,14 +253,14 @@ def convert_to_bin_feature(X):
 
 
 def main():
-    img = cv2.imread("test.jpg", 1)
+    img = cv2.imread("test2.jpg", 1)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
     step_size = 10
     kp = [cv2.KeyPoint(x, y, step_size)
           for y in range(0, gray.shape[0], step_size)
           for x in range(0, gray.shape[1], step_size)]
-    img = cv2.drawKeypoints(gray, kp, img)
+    # img = cv2.drawKeypoints(gray, kp, img)
 
     orb = cv2.ORB_create(edgeThreshold=0, patchSize=50)
     print("feature extracting...")
@@ -269,7 +269,7 @@ def main():
     print("convert to binary features...")
     X = convert_to_bin_feature(features)
 
-    km = KMedoids(n_clusters=100, n_jobs=-1, init_search=5,
+    km = KMedoids(n_clusters=100, n_jobs=1, init_search=5,
                   mem_save=True, init="kmeans++")
     print("KMedoids training...")
     km.fit(X)
