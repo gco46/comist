@@ -52,33 +52,20 @@ class FeatureExtractor(object):
         # 1つのpickleファイルにself.NUM_COMIC_SETの漫画の特徴を持たせる
         for comic_path in cat_p.iterdir():
             if comic_path.is_dir():
-                comic_feature = self._extract_with_cv2(comic_path)
-                cat_feature += comic_feature.tolist()
-                count += 1
-            if count % self.NUM_COMIC_SET == (self.NUM_COMIC_SET - 1):
-                cat_feature = np.array(cat_feature)
-                self._save_ComicSet_feature(
-                    cat_feature, category, comic_set_num)
-                cat_feature = []
-                comic_set_num += 1
-        # self.NUM_COMIC_SETの端数分を保存する
-        if cat_feature != []:
-            cat_feature = np.array(cat_feature)
-            self._save_ComicSet_feature(
-                cat_feature, category, comic_set_num)
+                comic_feature, comic_id = self._extract_with_cv2(comic_path)
+                self._save_ComicSet_feature(comic_feature, category, comic_id)
 
-    def _save_ComicSet_feature(self, feature_set, category, c_set_num):
+    def _save_ComicSet_feature(self, feature_set, category, comic_id):
         _, n_dim = feature_set.shape
-        col_name = ["x" + str(i) for i in range(n_dim-1)]
-        col_name = ["comic_id"] + col_name
-        ComicSet = pd.DataFrame(feature_set, columns=col_name)
         params_info = self._make_params_info_str()
-        target_path = Path(osp.join(self.feature, params_info, category))
+        target_path = Path(
+            osp.join(self.feature, params_info, category))
+        npy_name = osp.join(target_path, comic_id+".npy")
         try:
             os.makedirs(str(target_path))
         except FileExistsError:
             pass
-        ComicSet.to_pickle(str(target_path / str(c_set_num)))
+        np.save(npy_name, feature_set)
 
     def _make_params_info_str(self):
         """
@@ -91,8 +78,11 @@ class FeatureExtractor(object):
         """
         opencvによる特徴抽出を実施する
         compute()メソッドを持つ特徴記述子を想定
+        - output
+            features: array, (n_samples, n_dims)
+            comic_id: str, id number of comic
         """
-        comic_id = int(comic_path.name)
+        comic_id = comic_path.name
         features = []
         for file_path in comic_path.iterdir():
             if file_path.suffix == ".jpg":
@@ -103,10 +93,7 @@ class FeatureExtractor(object):
                 _, feature = self.fe.compute(img, kp)
                 features += feature.tolist()
         features = np.array(features)
-        num_f, num_dim = features.shape
-        ids = np.ones((num_f, 1), dtype=np.uint32) * comic_id
-        features = np.hstack((ids, features))
-        return features
+        return features, comic_id
 
 
 if __name__ == "__main__":
