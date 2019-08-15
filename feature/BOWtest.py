@@ -23,6 +23,7 @@ class KMedoids(object):
         self.tol = tol
         # medoidを更新した回数
         self.num_loop = 0
+        self.medoids_idx = None
         self.medoids = None
         # 直前のmedoids集合
         self.last_medoids = set([0])
@@ -60,42 +61,24 @@ class KMedoids(object):
         inits = Parallel(n_jobs=self.n_jobs)(
             [delayed(self._init_medoids)() for i in range(self.init_search)])
         print("initialize done.")
-        self.medoids = sorted(inits, key=lambda x: x[0])[0][1]
+        self.medoids_idx = sorted(inits, key=lambda x: x[0])[0][1]
+        self.medoids = X[self.medoids_idx, :]
 
         # fit完了後に最新のラベルを参照できるようにするため、ループの最後に
         # label更新を入れる
         # 一回目(初期値)のlabel更新はループ前で実施
-        tmp_labels = self._make_labels(self.medoids)
+        tmp_labels = self._make_labels(self.medoids_idx)
 
         # 終了条件：medoidに変化なし  or  ループ回数がmax_iterに到達
         print("train model...")
         while (self.num_loop <= self.max_iter) and self.loop_flag:
             one_hot_labels = self._encode_labels_to_OneHot(tmp_labels)
             self._update_medoids(one_hot_labels)
-            tmp_labels = self._make_labels(self.medoids)
+            tmp_labels = self._make_labels(self.medoids_idx)
             self.labels = tmp_labels
             self.num_loop += 1
+            self.medoids = X[self.medoids_idx, :]
         print("done.")
-
-    def get_BOWhistogram(self, X):
-        if self.medoids is None:
-            raise AttributeError("This object has not fitted yet, \
-                please do .fit() to training data")
-
-        # train dataの距離行列を残しておくためにラッチ、あとから復元
-        # (_make_labels()はself.Dを参照するため)
-        fitted_data_D = self.D
-        self.D = squareform(pdist(X, self.metric))
-
-        # test dataがどのクラスタに属するかを計算
-        labels = self._make_labels(self.medoids)
-        # histogram計算、[0]:histogram(非正規化),  [1]:binの境界値を表すarray
-        self.hist = np.histogram(labels, bins=self.n_clusters)[0]
-        # histogram正規化(サンプル数で除算)
-        self.hist = self.hist / X.shape[0]
-        # train dataの距離行列を保持しておく
-        self.D = fitted_data_D
-        return self.hist
 
     def _init_medoids(self):
         """
@@ -193,12 +176,12 @@ class KMedoids(object):
 
                 each_sample_D = np.sum(D_in_clusters, axis=1)
                 if each_sample_D.sum() == 0:
-                    tmp_medoids.append(self.medoids[n])
+                    tmp_medoids.append(self.medoids_idx[n])
                     continue
                 else:
                     np.place(each_sample_D, each_sample_D == 0, float("inf"))
                     tmp_medoids.append(np.argmin(each_sample_D))
-            self.medoids = np.array(tmp_medoids)
+            self.medoids_idx = np.array(tmp_medoids)
         else:
             # 各クラスタ内の二点間の距離を計算する
             # D_in_clusters.shape == (n_clusters, n_samples, n_samples), 対象行列
@@ -212,19 +195,46 @@ class KMedoids(object):
             # 最近傍として参照されないmedoidはそのまま次のmedoidとして選択
             alone_medoid_mask = (each_sample_D.sum(axis=1) == 0).astype(int)
             np.place(each_sample_D, each_sample_D == 0, float("inf"))
-            self.medoids = np.argmin(each_sample_D, axis=1) + \
-                (self.medoids * alone_medoid_mask)
+            self.medoids_idx = np.argmin(each_sample_D, axis=1) + \
+                (self.medoids_idx * alone_medoid_mask)
 
         # 終了条件判定
         self._judge_exit_condition()
 
     def _judge_exit_condition(self):
         unchanged_medoids = self.last_medoids.intersection(
-            set(self.medoids))
+            set(self.medoids_idx))
         if len(unchanged_medoids) == self.n_clusters:
             self.loop_flag = False
         else:
-            self.last_medoids = set(self.medoids)
+            self.last_medoids = set(self.medoids_idx)
+
+
+class BOWKMedoids(KMedoids):
+    """
+    KMediodsを使用したBOW用モデル
+    """
+
+    def __init__(self, n_clusters, max_iter=50, init="kmeans++",
+                 metric="hamming", n_jobs=1, init_search=5, mem_save=True):
+        super(BOWKMedoids, self).__init__(
+            n_clusters=n_clusters,
+            max_iter=max_iter,
+            init=init,
+            metric=metric,
+            n_jobs=n_jobs,
+            init_search=init_search,
+            mem_save=mem_save
+        )
+
+    def compute(self, X):
+        # medoidからの距離を計算
+        # shape = (num_cluster, num_dim)
+        dist_to_medoids = cdist(X, self.medoids, metric=self.metric)
+        count = np.argmin(dist_to_medoids, axis=1)
+        hist = np.histogram(count, bins=self.n_clusters)[0]
+        hist = hist / X.shape[0]
+        return hist
 
 
 def convert_to_bin_feature(X):
@@ -253,10 +263,9 @@ def convert_to_bin_feature(X):
 
 
 def main():
-    img = cv2.imread("test2.jpg", 1)
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    gray = cv2.imread("test.jpg", 0)
 
-    step_size = 10
+    step_size = 15
     kp = [cv2.KeyPoint(x, y, step_size)
           for y in range(0, gray.shape[0], step_size)
           for x in range(0, gray.shape[1], step_size)]
@@ -269,12 +278,14 @@ def main():
     print("convert to binary features...")
     X = convert_to_bin_feature(features)
 
-    km = KMedoids(n_clusters=100, n_jobs=1, init_search=5,
-                  mem_save=True, init="kmeans++")
+    km = BOWKMedoids(n_clusters=100, n_jobs=1, init_search=5,
+                     mem_save=True, init="kmeans++")
     print("KMedoids training...")
     km.fit(X)
-    print(len(km.medoids))
-    print(km.num_loop)
+    orb = cv2.ORB_create(edgeThreshold=0, patchSize=30, scaleFactor=1.0)
+    _, features = orb.compute(gray, kp)
+    X_test = convert_to_bin_feature(features)
+    hist = km.compute(X_test)
 
 
 if __name__ == "__main__":
