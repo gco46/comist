@@ -11,31 +11,44 @@ class FeatureExtractor(object):
     extract_save:特徴量を漫画単位でnp.saveで保存する
     """
 
-    def __init__(self, comic_root="../Comics", feature_type="orb", **kwargs):
+    def __init__(self, comic_root="../Comics", feature_type="orb",
+                 step=50, **kwargs):
         # データが保存してあるrootディレクトリ
         self.comic_root = Path(comic_root)
         # 特徴量の種類(opencv対応のもの)
         self.feature_type = feature_type.lower()
+        self.step = step
         self.kwargs = kwargs
+        # 特徴量毎のパラメータのデフォルト値を指定
+        # ひとまずスケールに関係するパラメータのみデフォルト値を設定
+        # gridで抽出するためthresholdは0とする
         self.DEFAULT_PARAMS = {
             "orb": {"patchSize": 31, "scaleFactor": 1.2},
             "brisk": {"octaves": 3, "patternScale": 1.0},
         }
         self._args_check()
-        self._set_cv2_object()
+        self._set_cv2_instance()
 
     def _args_check(self):
+        """
+        指定したfeature_typeとkwargsで与えられたパラメータとの整合性をチェックする
+        """
         params = self.DEFAULT_PARAMS[self.feature_type].keys()
         for arg in self.kwargs.keys():
             if arg not in params:
                 raise ValueError(
                     self.feature_type + " doesnt take argument " + arg)
 
-    def _set_cv2_object(self):
+    def _set_cv2_instance(self):
+        """
+        feature_typeに合わせたopencvのインスタンスを生成する
+        対応：ORB, BRISK
+        """
         params = self.DEFAULT_PARAMS[self.feature_type]
         for param in params.keys():
             if param in self.kwargs:
                 params[param] = self.kwargs[param]
+        self.cv2_params = params
         if self.feature_type == "orb":
             self.fe = cv2.ORB_create(
                 edgeThreshold=0,
@@ -63,7 +76,12 @@ class FeatureExtractor(object):
                 self._get_category_feature(category_path)
 
     def load_feature(self, csv_path):
-        data_ids = pd.read_csv(csv_path)
+        """
+        特徴量をファイルから読み込む
+        csv_path: str, 読み込む特徴量のcomic idが書かれたcsvファイルへのパス
+        """
+        data_ids = pd.read_csv(osp.join(self.feature_type, csv_path))
+        data_ids = data_ids["id"]
         data_ids = data_ids.values.reshape(-1).tolist()
         dir = self._make_params_info_str()
         feature_path = Path(osp.join(self.feature_type, dir))
@@ -74,6 +92,53 @@ class FeatureExtractor(object):
             feature = np.load(str(gen))
             feature_set += feature.tolist()
         return np.array(feature_set)
+
+    def train_test_split(self, test_size):
+        """
+        抽出した特徴量ファイル(.npy)からcomic idをtrain用, test用に分割し、
+        csvファイルに出力する
+        1列目：category
+        2列目：comic id
+        """
+        feature_path = Path(self.feature_type)
+        categories = feature_path.iterdir()
+        self.test_data = pd.DataFrame()
+        self.train_data = pd.DataFrame()
+        for cat_path in categories:
+            if cat_path.is_dir():
+                self._add_DataFrame_in_category(cat_path, test_size)
+        # インスタンス生成時のfeature_typeのディレクトリ内にcsvを出力する
+        self.train_data.to_csv(
+            osp.join(self.feature_type, "train.csv"), index=False)
+        self.test_data.to_csv(
+            osp.join(self.feature_type, "test.csv"), index=False)
+
+    def _add_DataFrame_in_category(self, cat_path, test_size):
+        """
+        指定したカテゴリ内でtrain, testを分割し、それぞれのdataframeを返す
+        """
+        ids = []
+        category = str(cat_path).split("/")[-1]
+        gen = cat_path.glob("**/*.npy")
+        for file_path in gen:
+            id = str(file_path).split("/")[-1][:-4]
+            ids.append(int(id))
+        # 先にtestサンプルを指定し、余ったファイルをtrainに使用する
+        num_test_samples = int(len(ids) * test_size)
+        test_id = np.random.choice(ids, num_test_samples, replace=False)
+        # csvの見やすさのため、idはソートする
+        test_id = np.sort(test_id)
+        train_id = np.array(list(set(ids) - set(test_id)))
+        test_df = self._make_DataFrame(category, test_id)
+        train_df = self._make_DataFrame(category, train_id)
+        # test, trainを既存のdataに追加する
+        self.test_data = pd.concat([self.test_data, test_df], axis=0)
+        self.train_data = pd.concat([self.train_data, train_df], axis=0)
+
+    def _make_DataFrame(self, category, id):
+        cat_list = [category] * len(id)
+        data = pd.DataFrame({"category": cat_list, "id": id})
+        return data
 
     def _get_category_feature(self, cat_p):
         category = cat_p.name
@@ -93,7 +158,7 @@ class FeatureExtractor(object):
         _, n_dim = feature_set.shape
         params_info = self._make_params_info_str()
         target_path = Path(
-            osp.join(self.feature, params_info, category))
+            osp.join(self.feature_type, params_info, category))
         npy_name = osp.join(target_path, comic_id+".npy")
         try:
             os.makedirs(str(target_path))
@@ -105,8 +170,12 @@ class FeatureExtractor(object):
         """
         特徴抽出のパラメータ情報を文字列にして返す。(ディレクトリ名用)
         """
-        result = "p" + str(self.patch_size) + "s" + str(self.step)
-        return result
+        return ""
+        # ------- disabled -----------
+        # if self.feature_type == "orb":
+        #     result = "p" + str(self.patch_size) + "s" + str(self.step)
+        # return result
+        # ----------------------------
 
     def _extract_with_cv2(self, comic_path):
         """
@@ -131,5 +200,7 @@ class FeatureExtractor(object):
 
 
 if __name__ == "__main__":
-    fe = FeatureExtractor(patchSize=50)
+    fe = FeatureExtractor(step=50, patchSize=50)
+    # fe.train_test_split(test_size=0.5)
     # fe.extract_save()
+    feature = fe.load_feature("test.csv")
