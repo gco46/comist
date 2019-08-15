@@ -8,25 +8,46 @@ import pandas as pd
 
 class FeatureExtractor(object):
     """
-    extract_save:特徴量をDataFrame　pickleで保存。
+    extract_save:特徴量を漫画単位でnp.saveで保存する
     """
 
-    def __init__(self, comic_root="../Comics", feature="orb", patch_size=50,
-                 step=50):
+    def __init__(self, comic_root="../Comics", feature_type="orb", **kwargs):
         # データが保存してあるrootディレクトリ
         self.comic_root = Path(comic_root)
         # 特徴量の種類(opencv対応のもの)
-        self.feature = feature
-        self.patch_size = patch_size
-        self.step = step
-        if self.feature == "orb":
+        self.feature_type = feature_type.lower()
+        self.kwargs = kwargs
+        self.DEFAULT_PARAMS = {
+            "orb": {"patchSize": 31, "scaleFactor": 1.2},
+            "brisk": {"octaves": 3, "patternScale": 1.0},
+        }
+        self._args_check()
+        self._set_cv2_object()
+
+    def _args_check(self):
+        params = self.DEFAULT_PARAMS[self.feature_type].keys()
+        for arg in self.kwargs.keys():
+            if arg not in params:
+                raise ValueError(
+                    self.feature_type + " doesnt take argument " + arg)
+
+    def _set_cv2_object(self):
+        params = self.DEFAULT_PARAMS[self.feature_type]
+        for param in params.keys():
+            if param in self.kwargs:
+                params[param] = self.kwargs[param]
+        if self.feature_type == "orb":
             self.fe = cv2.ORB_create(
                 edgeThreshold=0,
-                patchSize=self.patch_size
+                patchSize=params["patchSize"],
+                scaleFactor=params["scaleFactor"]
             )
-        # pickle一つに含む漫画の数
-        # 大きいほど一つのpickleファイルのサイズが大きくなる
-        self.NUM_COMIC_SET = 50
+        elif self.feature_type == "brisk":
+            self.fe = cv2.BRISK_create(
+                thresh=0,
+                octaves=params["octaves"],
+                patternScale=params["patternScale"]
+            )
 
     def extract_save(self):
         """
@@ -40,6 +61,19 @@ class FeatureExtractor(object):
         for category_path in self.comic_root.iterdir():
             if category_path.is_dir():
                 self._get_category_feature(category_path)
+
+    def load_feature(self, csv_path):
+        data_ids = pd.read_csv(csv_path)
+        data_ids = data_ids.values.reshape(-1).tolist()
+        dir = self._make_params_info_str()
+        feature_path = Path(osp.join(self.feature_type, dir))
+        feature_set = []
+        for id in data_ids:
+            gen = feature_path.glob(osp.join("**", str(id)+".npy"))
+            gen = list(gen)[0]
+            feature = np.load(str(gen))
+            feature_set += feature.tolist()
+        return np.array(feature_set)
 
     def _get_category_feature(self, cat_p):
         category = cat_p.name
@@ -97,5 +131,5 @@ class FeatureExtractor(object):
 
 
 if __name__ == "__main__":
-    fe = FeatureExtractor()
-    fe.extract_save()
+    fe = FeatureExtractor(patchSize=50)
+    # fe.extract_save()
