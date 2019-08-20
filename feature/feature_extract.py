@@ -200,7 +200,7 @@ class FeatureExtractor(object):
 
 
 if __name__ == "__main__":
-    fe = FeatureExtractor(step=50, patchSize=50)
-    # fe.train_test_split(test_size=0.5)
-    # fe.extract_save()
+    fe = FeatureExtractor(step=200, patchSize=200)
+    fe.extract_save()
+    fe.train_test_split(test_size=0.7)
     feature = fe.load_feature("test.csv")

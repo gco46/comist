@@ -6,6 +6,7 @@ from scipy.spatial.distance import cdist, pdist, squareform
 import matplotlib.pyplot as plt
 from joblib import Parallel, delayed
 import cv2
+from tqdm import tqdm
 
 
 class KMedoids(object):
@@ -80,6 +81,9 @@ class KMedoids(object):
             self.medoids = X[self.medoids_idx, :]
         print("done.")
 
+        # メモリ節約のため距離行列を削除しておく
+        self.D = None
+
     def _init_medoids(self):
         """
         medoidの初期値を選択する
@@ -89,7 +93,8 @@ class KMedoids(object):
         """
         if self.init == "kmeans++":
             medoids = []
-            for n in range(self.n_clusters):
+            print("initializing medoids by kmeans++ method...")
+            for n in tqdm(range(self.n_clusters)):
                 if n == 0:
                     # 最初のセントロイドは乱数で決定する
                     medoid = np.random.choice(
@@ -119,7 +124,10 @@ class KMedoids(object):
                 range(self.n_samples), self.n_clusters, replace=False)
 
         # 評価を計算
-        score_of_init = self._eval_init(medoids)
+        if self.init_search > 1:
+            score_of_init = self._eval_init(medoids)
+        else:
+            score_of_init = 0.
         return (score_of_init, medoids)
 
     def _eval_init(self, medoids):
@@ -131,7 +139,8 @@ class KMedoids(object):
         one_hot_labels = self._encode_labels_to_OneHot(labels)
         if self.mem_save:
             each_sample_D = 0
-            for n in range(self.n_clusters):
+            print("evaluating and selecting initial medoids...")
+            for n in tqdm(range(self.n_clusters)):
                 label_vec = one_hot_labels[:, n]
                 D_in_clusters = label_vec[np.newaxis, :] * \
                     label_vec[:, np.newaxis]
@@ -169,7 +178,7 @@ class KMedoids(object):
         """
         if self.mem_save:
             tmp_medoids = []
-            for n in range(self.n_clusters):
+            for n in tqdm(range(self.n_clusters)):
                 label_vec = one_hot_labels[:, n]
                 D_in_clusters = label_vec[None, :] * label_vec[:, None]
                 D_in_clusters = D_in_clusters * self.D
