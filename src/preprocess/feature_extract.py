@@ -107,14 +107,13 @@ class ComicFeatureExtractor(FeatureExtractor):
         特徴量をファイルから読み込む
         csv_path: str, 読み込む特徴量のcomic idが書かれたcsvファイルへのパス
         """
-        data_ids = pd.read_csv(osp.join(self.feature_type, csv_path))
+        data_ids = pd.read_csv(osp.join(self.save_feat_path, csv_path))
         data_ids = data_ids["id"]
         data_ids = data_ids.values.reshape(-1).tolist()
         dir = self._make_params_info_str()
-        feature_path = Path(osp.join(self.feature_type, dir))
         feature_set = []
         for id in data_ids:
-            gen = feature_path.glob(osp.join("**", str(id)+".npy"))
+            gen = self.save_feat_path.glob(osp.join("**", str(id)+".npy"))
             gen = list(gen)[0]
             feature = np.load(str(gen))
             feature_set += feature.tolist()
@@ -127,8 +126,7 @@ class ComicFeatureExtractor(FeatureExtractor):
         1列目：category
         2列目：comic id
         """
-        feature_path = Path(self.feature_type)
-        categories = feature_path.iterdir()
+        categories = self.save_feat_path.iterdir()
         self.test_data = pd.DataFrame()
         self.train_data = pd.DataFrame()
         for cat_path in categories:
@@ -136,9 +134,9 @@ class ComicFeatureExtractor(FeatureExtractor):
                 self._add_DataFrame_in_category(cat_path, test_size)
         # インスタンス生成時のfeature_typeのディレクトリ内にcsvを出力する
         self.train_data.to_csv(
-            osp.join(self.feature_type, "train.csv"), index=False)
+            str(self.save_feat_path.joinpath("train.csv")), index=False)
         self.test_data.to_csv(
-            osp.join(self.feature_type, "test.csv"), index=False)
+            str(self.save_feat_path.joinpath("test.csv")), index=False)
 
     def _add_DataFrame_in_category(self, cat_path, test_size):
         """
@@ -215,5 +213,5 @@ class ComicFeatureExtractor(FeatureExtractor):
 if __name__ == "__main__":
     fe = ComicFeatureExtractor(step=200, patchSize=200)
     fe.extract_save()
-    # fe.train_test_split(test_size=0.7)
-    # feature = fe.load_feature("test.csv")
+    fe.train_test_split(test_size=0.7)
+    feature = fe.load_feature("test.csv")
