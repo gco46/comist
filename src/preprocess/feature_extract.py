@@ -72,6 +72,12 @@ class FeatureExtractor(object):
         np.save(str(path), feature_set)
 
 
+class ImageFeatureExtractor(FeatureExtractor):
+    def __init__(self, root_path="../../data/ukbench",
+                 feature_type="orb", step=50, **kwargs):
+        pass
+
+
 class ComicFeatureExtractor(FeatureExtractor):
     """
     extract_save:特徴量を漫画単位でnp.saveで保存する
@@ -102,7 +108,7 @@ class ComicFeatureExtractor(FeatureExtractor):
             if category_path.is_dir():
                 self._get_category_feature(category_path)
 
-    def load_feature(self, csv_path):
+    def load_feature(self, csv_path, convert=False):
         """
         特徴量をファイルから読み込む
         csv_path: str, 読み込む特徴量のcomic idが書かれたcsvファイルへのパス
@@ -117,7 +123,34 @@ class ComicFeatureExtractor(FeatureExtractor):
             gen = list(gen)[0]
             feature = np.load(str(gen))
             feature_set += feature.tolist()
-        return np.array(feature_set)
+        if convert:
+            return self._convert_to_bin_feature(np.array(feature_set))
+        else:
+            return np.array(feature_set)
+
+    def _convert_to_bin_feature(self, X):
+        """
+        uint8で表現された特徴をバイナリコードに変換する
+        input: shape  = (n_samples, n_dim)
+        output: shape = (n_samples, n_dim * 8)
+        """
+        # arrayの各要素を2進数表記(文字列)へ変換する
+        # np.frompyfunc(FuncObj, num of argv, num of outputs)
+        b_format = np.frompyfunc(format, 2, 1)
+        bin_str_X = b_format(X, "08b")
+
+        # arrayの各要素をlistへ変換する(文字列表記の二進数をlistへ分割する)
+        str2list_np = np.frompyfunc(list, 1, 1)
+        # サンプルごとにlistを結合する
+        # 次の処理でmap関数を使うため、list型に変換する
+        # listを要素に持つnp.arrayに対してmapは使えないっぽい
+        bin_list_X = str2list_np(bin_str_X).sum(axis=1).tolist()
+
+        # 各要素が文字列となっているため、uint8へ変換
+        char2int_np = np.frompyfunc(int, 1, 1)
+        result = char2int_np(bin_list_X).astype(np.uint8)
+
+        return result
 
     def train_test_split(self, test_size):
         """
