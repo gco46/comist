@@ -19,7 +19,7 @@ class ComicFeatureExtractor(FeatureExtractor):
     extract_save:特徴量を漫画単位でnp.saveで保存する
     """
 
-    def __init__(self, comic_root="../Comics", feature_type="orb",
+    def __init__(self, comic_root="../../Comics", feature_type="orb",
                  step=50, **kwargs):
         # データが保存してあるrootディレクトリ
         self.comic_root = Path(comic_root)
@@ -66,7 +66,7 @@ class ComicFeatureExtractor(FeatureExtractor):
         elif self.feature_type == "brisk":
             self.fe = cv2.BRISK_create(
                 thresh=0,
-                octaves=params["octaves"], comic_root.iterdi
+                octaves=params["octaves"],
                 patternScale=params["patternScale"]
             )
 

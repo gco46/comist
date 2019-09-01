@@ -4,4 +4,6 @@ lib_test/
 readme.md
 .ipynb_checkpoints/
 .gitignore
-data/
+Comics/
+features/
+
