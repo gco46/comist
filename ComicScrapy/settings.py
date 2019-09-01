@@ -72,7 +72,7 @@ ITEM_PIPELINES = {
     'ComicScrapy.pipelines.MongoPipeline': 300,
     'ComicScrapy.pipelines.SymboliclinkPipeline': 800
 }
-IMAGES_STORE = './Comics'
+IMAGES_STORE = '../data/Comics'
 
 # Enable and configure the AutoThrottle extension (disabled by default)
 # See https://doc.scrapy.org/en/latest/topics/autothrottle.html

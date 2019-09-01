@@ -1,11 +1,11 @@
 from clustering import BOWKMedoids, convert_to_bin_feature
-from feature_extract import FeatureExtractor
+from feature_extract import ComicFeatureExtractor
 import numpy as np
 import pickle
 
 
 def train():
-    fe = FeatureExtractor(feature_type="orb")
+    fe = ComicFeatureExtractor(feature_type="orb")
     X_train = fe.load_feature("train.csv")
     # 全要素が0の特徴を削除する(特徴点が多数重なるため)
     tmp = X_train.sum(axis=1)

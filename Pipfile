@@ -23,6 +23,7 @@ torchsummary = "*"
 scikit-image = "*"
 pandas = "==0.24.2"
 tqdm = "*"
+pylint = "*"
 
 [requires]
 python_version = "3.7"

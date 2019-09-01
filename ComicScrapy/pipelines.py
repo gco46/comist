@@ -34,8 +34,8 @@ class MongoPipeline(object):
 
 
 class SymboliclinkPipeline(object):
-    ProjectPath = 'project/ComicScrapy'
-    AbsProjectPath = osp.join(osp.expanduser('~'), ProjectPath)
+    DataPath = 'project/ComicCluster/data'
+    AbsDataPath = osp.join(osp.expanduser('~'), DataPath)
     ComicDir = myCfg.IMAGES_STORE.split("/")[-1]
     NextSym = "next"
     PreviousSym = "privious"
@@ -64,7 +64,7 @@ class SymboliclinkPipeline(object):
         tgt_cat, tgt_id = target_url.split("/")[-2:]
         base_cat, base_id = base_url.split("/")[-2:]
         sym_src = osp.join(
-            self.AbsProjectPath, self.ComicDir, tgt_cat, tgt_id
+            self.AbsDataPath, self.ComicDir, tgt_cat, tgt_id
         )
         sym_name = osp.join(
             self.ComicDir, base_cat, base_id, link_name

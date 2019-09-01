@@ -7,6 +7,14 @@ import pandas as pd
 
 
 class FeatureExtractor(object):
+    def __init__(self):
+        pass
+
+    def extract_save(self):
+        pass
+
+
+class ComicFeatureExtractor(FeatureExtractor):
     """
     extract_save:特徴量を漫画単位でnp.saveで保存する
     """
@@ -58,7 +66,7 @@ class FeatureExtractor(object):
         elif self.feature_type == "brisk":
             self.fe = cv2.BRISK_create(
                 thresh=0,
-                octaves=params["octaves"],
+                octaves=params["octaves"], comic_root.iterdi
                 patternScale=params["patternScale"]
             )
 
@@ -200,7 +208,7 @@ class FeatureExtractor(object):
 
 
 if __name__ == "__main__":
-    fe = FeatureExtractor(step=200, patchSize=200)
+    fe = ComicFeatureExtractor(step=200, patchSize=200)
     fe.extract_save()
     fe.train_test_split(test_size=0.7)
     feature = fe.load_feature("test.csv")
