@@ -7,23 +7,11 @@ import pandas as pd
 
 
 class FeatureExtractor(object):
-    def __init__(self):
-        pass
-
-    def extract_save(self):
-        pass
-
-
-class ComicFeatureExtractor(FeatureExtractor):
     """
-    extract_save:特徴量を漫画単位でnp.saveで保存する
+    cv2 objectを使用して画像から特徴量を抽出する
     """
 
-    def __init__(self, comic_root="../../Comics", feature_type="orb",
-                 step=50, **kwargs):
-        # データが保存してあるrootディレクトリ
-        self.comic_root = Path(comic_root)
-        # 特徴量の種類(opencv対応のもの)
+    def __init__(self, feature_type="orb", step=50, **kwargs):
         self.feature_type = feature_type.lower()
         self.step = step
         self.kwargs = kwargs
@@ -36,6 +24,10 @@ class ComicFeatureExtractor(FeatureExtractor):
         }
         self._args_check()
         self._set_cv2_instance()
+        self.feat_path = Path("../../data/features")
+
+    def extract_save(self):
+        pass
 
     def _args_check(self):
         """
@@ -70,6 +62,33 @@ class ComicFeatureExtractor(FeatureExtractor):
                 patternScale=params["patternScale"]
             )
 
+    def _make_dirs(self, path):
+        try:
+            os.makedirs(str(path))
+        except FileExistsError:
+            pass
+
+    def _save_feature(self, feature_set, path):
+        np.save(str(path), feature_set)
+
+
+class ComicFeatureExtractor(FeatureExtractor):
+    """
+    extract_save:特徴量を漫画単位でnp.saveで保存する
+    """
+
+    def __init__(self, root_path="../../data/Comics",
+                 feature_type="orb", step=50, **kwargs):
+        super(ComicFeatureExtractor, self).__init__(
+            feature_type,
+            step,
+            **kwargs
+        )
+        self.root_path = Path(root_path)
+        step_info = "step" + str(self.step)
+        self.save_feat_path = self.feat_path.joinpath(
+            self.feature_type, step_info)
+
     def extract_save(self):
         """
         self.comic_root内の画像を読み込み、特徴量をDataFrame pickleで保存する。
@@ -79,7 +98,7 @@ class ComicFeatureExtractor(FeatureExtractor):
         1列目：comic ID
         2列目以降：１特徴点に対する特徴量(バイナリ未変換、uint8)
         """
-        for category_path in self.comic_root.iterdir():
+        for category_path in self.root_path.iterdir():
             if category_path.is_dir():
                 self._get_category_feature(category_path)
 
@@ -150,6 +169,8 @@ class ComicFeatureExtractor(FeatureExtractor):
 
     def _get_category_feature(self, cat_p):
         category = cat_p.name
+        target_path = self.save_feat_path.joinpath(category)
+        self._make_dirs(target_path)
         # COMIC_SET_NUMずつ保存するためのカウンタ
         count = 0
         # pickleファイルに番号を割り付けるためのカウンタ
@@ -160,30 +181,14 @@ class ComicFeatureExtractor(FeatureExtractor):
         for comic_path in cat_p.iterdir():
             if comic_path.is_dir():
                 comic_feature, comic_id = self._extract_with_cv2(comic_path)
-                self._save_ComicSet_feature(comic_feature, category, comic_id)
-
-    def _save_ComicSet_feature(self, feature_set, category, comic_id):
-        _, n_dim = feature_set.shape
-        params_info = self._make_params_info_str()
-        target_path = Path(
-            osp.join(self.feature_type, params_info, category))
-        npy_name = osp.join(target_path, comic_id+".npy")
-        try:
-            os.makedirs(str(target_path))
-        except FileExistsError:
-            pass
-        np.save(npy_name, feature_set)
+                save_path = target_path.joinpath(comic_id + ".npy")
+                self._save_feature(comic_feature, save_path)
 
     def _make_params_info_str(self):
         """
         特徴抽出のパラメータ情報を文字列にして返す。(ディレクトリ名用)
         """
-        return ""
-        # ------- disabled -----------
-        # if self.feature_type == "orb":
-        #     result = "p" + str(self.patch_size) + "s" + str(self.step)
-        # return result
-        # ----------------------------
+        return "step" + str(self.step)
 
     def _extract_with_cv2(self, comic_path):
         """
@@ -210,5 +215,5 @@ class ComicFeatureExtractor(FeatureExtractor):
 if __name__ == "__main__":
     fe = ComicFeatureExtractor(step=200, patchSize=200)
     fe.extract_save()
-    fe.train_test_split(test_size=0.7)
-    feature = fe.load_feature("test.csv")
+    # fe.train_test_split(test_size=0.7)
+    # feature = fe.load_feature("test.csv")
