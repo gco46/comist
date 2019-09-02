@@ -135,6 +135,28 @@ class ImageFeatureExtractor(FeatureExtractor):
         _, feature = self.fe.compute(img, kp)
         return feature
 
+    def train_test_split(self, test_size):
+        feats_path = list(map(str, self.save_feat_path.glob("*.npy")))
+        feats_path = sorted(feats_path)
+        num_test = int(len(feats_path) * test_size)
+        test_idx = np.random.choice(len(feats_path), num_test, replace=False)
+        test_idx = sorted(test_idx)
+        train_set = set(range(len(feats_path))) - set(test_idx)
+        train_idx = np.array(list(train_set))
+
+        np.savetxt(
+            str(self.save_feat_path.joinpath("test.csv")),
+            test_idx,
+            delimiter=",",
+            fmt="%d"
+        )
+        np.savetxt(
+            str(self.save_feat_path.joinpath("train.csv")),
+            train_idx,
+            delimiter=",",
+            fmt="%d"
+        )
+
 
 class ComicFeatureExtractor(FeatureExtractor):
     """
