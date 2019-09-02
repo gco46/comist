@@ -161,12 +161,12 @@ class ImageFeatureExtractor(FeatureExtractor):
         return feature
 
     def train_test_split(self, test_size):
-        feats_path = self.save_feat_path.glob("*.npy")
+        feats_path = list(self.save_feat_path.glob("*.npy"))
         num_test = int(len(feats_path) * test_size)
         test_idx = np.random.choice(len(feats_path), num_test, replace=False)
         test_idx = sorted(test_idx)
         train_set = set(range(len(feats_path))) - set(test_idx)
-        train_idx = np.array(list(train_set))
+        train_idx = sorted(np.array(list(train_set)))
 
         test_df = pd.DataFrame(test_idx, columns=["id"])
         train_df = pd.DataFrame(train_idx, columns=["id"])
@@ -332,7 +332,7 @@ class ComicFeatureExtractor(FeatureExtractor):
 
 
 if __name__ == "__main__":
-    fe = ComicFeatureExtractor(step=200, patchSize=200)
-    fe.extract_save()
+    fe = ImageFeatureExtractor(step=100, patchSize=100)
+    # fe.extract_save()
     fe.train_test_split(test_size=0.7)
-    feature = fe.load_feature("test.csv")
+    # feature = fe.load_feature("test.csv")
