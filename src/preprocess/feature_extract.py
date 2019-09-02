@@ -27,6 +27,25 @@ class FeatureExtractor(object):
         self._set_cv2_instance()
         self.feat_path = Path("../../data/features")
 
+    def load_feature(self, csv_path, convert=False):
+        """
+        特徴量をファイルから読み込む
+        csv_path: str, 読み込む特徴量のcsvファイル
+        """
+        data_ids = pd.read_csv(osp.join(self.save_feat_path, csv_path))
+        data_ids = data_ids["id"]
+        data_ids = data_ids.values.reshape(-1).tolist()
+        dir = self._make_params_info_str()
+        feature_set = []
+        for id in data_ids:
+            feat_path = self._get_loadfile_path(id)
+            feature = np.load(str(feat_path))
+            feature_set += feature.tolist()
+        if convert:
+            return self._convert_to_bin_feature(np.array(feature_set))
+        else:
+            return np.array(feature_set)
+
     def _args_check(self):
         """
         指定したfeature_typeとkwargsで与えられたパラメータとの整合性をチェックする
@@ -105,6 +124,12 @@ class FeatureExtractor(object):
               for x in range(0, img.shape[1], self.step)]
         return kp
 
+    def _get_loadfile_path(self, id):
+        """
+        サブクラスで処理定義
+        """
+        return None
+
 
 class ImageFeatureExtractor(FeatureExtractor):
     def __init__(self, root_path="../../data/ukbench",
@@ -136,26 +161,32 @@ class ImageFeatureExtractor(FeatureExtractor):
         return feature
 
     def train_test_split(self, test_size):
-        feats_path = list(map(str, self.save_feat_path.glob("*.npy")))
-        feats_path = sorted(feats_path)
+        feats_path = self.save_feat_path.glob("*.npy")
         num_test = int(len(feats_path) * test_size)
         test_idx = np.random.choice(len(feats_path), num_test, replace=False)
         test_idx = sorted(test_idx)
         train_set = set(range(len(feats_path))) - set(test_idx)
         train_idx = np.array(list(train_set))
 
-        np.savetxt(
-            str(self.save_feat_path.joinpath("test.csv")),
-            test_idx,
-            delimiter=",",
-            fmt="%d"
-        )
-        np.savetxt(
-            str(self.save_feat_path.joinpath("train.csv")),
-            train_idx,
-            delimiter=",",
-            fmt="%d"
-        )
+        test_df = pd.DataFrame(test_idx, columns=["id"])
+        train_df = pd.DataFrame(train_idx, columns=["id"])
+        test_df.to_csv(
+            str(self.save_feat_path.joinpath("test.csv")), index=False)
+        train_df.to_csv(
+            str(self.save_feat_path.joinpath("train.csv")), index=False)
+
+    def load_feature(self, csv_path, convert=False):
+        # 特徴量ファイル一覧を先に読み込む
+        self.feats_path = list(self.save_feat_path.glob("*.npy"))
+        self.feats_path = sorted(self.feats_path)
+        feature = super().load_feature(csv_path, convert=convert)
+        return feature
+
+    def _get_loadfile_path(self, id):
+        """
+        idから読み込むファイルのPathオブジェクトを指定して返す。
+        """
+        return self.feats_path[id]
 
 
 class ComicFeatureExtractor(FeatureExtractor):
@@ -290,6 +321,14 @@ class ComicFeatureExtractor(FeatureExtractor):
                 features += feature.tolist()
         features = np.array(features)
         return features
+
+    def _get_loadfile_path(self, id):
+        """
+        idから読み込むファイルのPathオブジェクトを指定し、返す
+        """
+        gen = self.save_feat_path.glob(osp.join("**", str(id)+".npy"))
+        result = list(gen)[0]
+        return result
 
 
 if __name__ == "__main__":
