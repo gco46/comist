@@ -99,6 +99,12 @@ class FeatureExtractor(object):
         """
         return "step" + str(self.step)
 
+    def _get_keypoints(self, img):
+        kp = [cv2.KeyPoint(x, y, self.step)
+              for y in range(0, img.shape[0], self.step)
+              for x in range(0, img.shape[1], self.step)]
+        return kp
+
 
 class ImageFeatureExtractor(FeatureExtractor):
     def __init__(self, root_path="../../data/ukbench",
@@ -114,7 +120,20 @@ class ImageFeatureExtractor(FeatureExtractor):
             "bench", self.feature_type, step_info)
 
     def extract_save(self):
-        pass
+        self._make_dirs(self.save_feat_path)
+        for img_path in self.root_path.iterdir():
+            if img_path.suffix == ".jpg":
+                feature = self._extract_image_feat(img_path)
+                self._save_feature(
+                    feature,
+                    self.save_feat_path.joinpath(img_path.stem + ".npy")
+                )
+
+    def _extract_image_feat(self, img_path):
+        img = cv2.imread(str(img_path), cv2.IMREAD_GRAYSCALE)
+        kp = self._get_keypoints(img)
+        _, feature = self.fe.compute(img, kp)
+        return feature
 
 
 class ComicFeatureExtractor(FeatureExtractor):
@@ -227,11 +246,12 @@ class ComicFeatureExtractor(FeatureExtractor):
         # 1つのpickleファイルにself.NUM_COMIC_SETの漫画の特徴を持たせる
         for comic_path in cat_p.iterdir():
             if comic_path.is_dir():
-                comic_feature, comic_id = self._extract_with_cv2(comic_path)
+                comic_id = comic_path.name
+                comic_feature = self._extract_comic_feat(comic_path)
                 save_path = target_path.joinpath(comic_id + ".npy")
                 self._save_feature(comic_feature, save_path)
 
-    def _extract_with_cv2(self, comic_path):
+    def _extract_comic_feat(self, comic_path):
         """
         opencvによる特徴抽出を実施する
         compute()メソッドを持つ特徴記述子を想定
@@ -239,18 +259,15 @@ class ComicFeatureExtractor(FeatureExtractor):
             features: array, (n_samples, n_dims)
             comic_id: str, id number of comic
         """
-        comic_id = comic_path.name
         features = []
         for file_path in comic_path.iterdir():
             if file_path.suffix == ".jpg":
                 img = cv2.imread(str(file_path), cv2.IMREAD_GRAYSCALE)
-                kp = [cv2.KeyPoint(x, y, self.step)
-                      for y in range(0, img.shape[0], self.step)
-                      for x in range(0, img.shape[1], self.step)]
+                kp = self._get_keypoints(img)
                 _, feature = self.fe.compute(img, kp)
                 features += feature.tolist()
         features = np.array(features)
-        return features, comic_id
+        return features
 
 
 if __name__ == "__main__":
