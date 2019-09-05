@@ -27,15 +27,22 @@ class FeatureExtractor(object):
         self._set_cv2_instance()
         self.feat_path = Path("../../data/features")
 
+    def _get_data_ids(self, path):
+        """
+        path: str, id情報を含むファイルへのパス
+        """
+        data_ids = pd.read_csv(osp.join(self.save_feat_path, path))
+        data_ids = data_ids["id"]
+        data_ids = data_ids.values.reshape(-1).tolist()
+        return data_ids
+
     def load_feature(self, csv_path, convert=False):
         """
         特徴量をファイルから読み込む
         csv_path: str, 読み込む特徴量のcsvファイル
+        convert: bool, Trueなら特徴をバイナリ(0 or 1)に変換する(np.uint8)
         """
-        data_ids = pd.read_csv(osp.join(self.save_feat_path, csv_path))
-        data_ids = data_ids["id"]
-        data_ids = data_ids.values.reshape(-1).tolist()
-        dir = self._make_params_info_str()
+        data_ids = self._get_data_ids(csv_path)
         feature_set = []
         for id in data_ids:
             feat_path = self._get_loadfile_path(id)
@@ -45,6 +52,19 @@ class FeatureExtractor(object):
             return self._convert_to_bin_feature(np.array(feature_set))
         else:
             return np.array(feature_set)
+
+    def load_feature_for_each_file(self, csv_path, convert=False):
+        """
+        ファイル単位でfeatureを返すiteratorオブジェクト
+        """
+        data_ids = self._get_data_ids(csv_path)
+        for id in data_ids:
+            feat_path = self._get_loadfile_path(id)
+            feature = np.load(str(feat_path))
+            if convert:
+                yield self._convert_to_bin_feature(feature)
+            else:
+                yield feature
 
     def _args_check(self):
         """
