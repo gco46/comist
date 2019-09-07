@@ -62,7 +62,7 @@ class FeatureExtractor(object):
             feat_path = self._get_loadfile_path(id)
             feature = np.load(str(feat_path))
             if convert:
-                yield self._convert_to_bin_feature(feature)
+                yield self._convert_to_bin_feature(np.array(feature))
             else:
                 yield feature
 
@@ -201,6 +201,11 @@ class ImageFeatureExtractor(FeatureExtractor):
         self.feats_path = sorted(self.feats_path)
         feature = super().load_feature(csv_path, convert=convert)
         return feature
+
+    def load_feature_for_each_file(self, csv_path, convert=False):
+        self.feats_path = list(self.save_feat_path.glob("*.npy"))
+        self.feats_path = sorted(self.feats_path)
+        return super().load_feature_for_each_file(csv_path, convert=convert)
 
     def _get_loadfile_path(self, id):
         """
@@ -352,7 +357,7 @@ class ComicFeatureExtractor(FeatureExtractor):
 
 
 if __name__ == "__main__":
-    fe = ImageFeatureExtractor(step=100, patchSize=100)
+    fe = ImageFeatureExtractor(step=10, patchSize=100)
     # fe.extract_save()
-    fe.train_test_split(test_size=0.7)
+    # fe.train_test_split(test_size=0.7)
     # feature = fe.load_feature("test.csv")
