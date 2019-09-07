@@ -1,12 +1,12 @@
-from clustering import BOWKMedoids, convert_to_bin_feature
-from feature_extract import ComicFeatureExtractor
+from clustering import BOWKMedoids
+from feature_extract import ComicFeatureExtractor, ImageFeatureExtractor
 import numpy as np
 import pickle
 
 
 def train():
-    fe = ComicFeatureExtractor(feature_type="orb")
-    X_train = fe.load_feature("train.csv")
+    fe = ImageFeatureExtractor(step=100)
+    X_train = fe.load_feature("train.csv", convert=True)
     # 全要素が0の特徴を削除する(特徴点が多数重なるため)
     tmp = X_train.sum(axis=1)
     del_idx = np.where(tmp == 0)[0]
@@ -16,7 +16,6 @@ def train():
     np.random.seed(46)
     idx = np.random.choice(range(X_train.shape[0]), 30000, replace=False)
     X_train = X_train[idx, :]
-    X_train = convert_to_bin_feature(X_train)
     bowkm = BOWKMedoids(n_clusters=1000, init_search=5, init="kmeans++")
     bowkm.fit(X_train)
     # 辞書(BOWオブジェクト)を保存

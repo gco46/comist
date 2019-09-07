@@ -62,9 +62,8 @@ class FeatureExtractor(object):
             feat_path = self._get_loadfile_path(id)
             feature = np.load(str(feat_path))
             if convert:
-                yield self._convert_to_bin_feature(np.array(feature))
-            else:
-                yield feature
+                feature = self._convert_to_bin_feature(feature)
+            yield feat_path, feature
 
     def _args_check(self):
         """
@@ -357,7 +356,13 @@ class ComicFeatureExtractor(FeatureExtractor):
 
 
 if __name__ == "__main__":
+    import pickle
+    with open("bowkm", "rb") as obj:
+        voc = pickle.load(obj)
     fe = ImageFeatureExtractor(step=10, patchSize=100)
+    for file_path, x in fe.load_feature_for_each_file("train.csv", True):
+        res = voc.compute(x)
+        print(file_path, x.shape)
     # fe.extract_save()
     # fe.train_test_split(test_size=0.7)
     # feature = fe.load_feature("test.csv")
