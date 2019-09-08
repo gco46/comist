@@ -179,13 +179,22 @@ class ImageFeatureExtractor(FeatureExtractor):
         _, feature = self.fe.compute(img, kp)
         return feature
 
-    def train_test_split(self, test_size):
+    def train_test_split(self, test_size, isUkbench=True):
         feats_path = list(self.save_feat_path.glob("*.npy"))
-        num_test = int(len(feats_path) * test_size)
-        test_idx = np.random.choice(len(feats_path), num_test, replace=False)
-        test_idx = sorted(test_idx)
-        train_set = set(range(len(feats_path))) - set(test_idx)
-        train_idx = sorted(np.array(list(train_set)))
+        if isUkbench:
+            # ukbench datasetの場合、画像四枚で一組なので
+            # 各クラスでtrain:1, test:3とする
+            feats_path.sort()
+            train_idx = np.arange(0, len(feats_path), 4)
+            test_idx = set(range(len(feats_path))) - set(train_idx)
+            test_idx = sorted(np.array(list(test_idx)))
+        else:
+            num_test = int(len(feats_path) * test_size)
+            test_idx = np.random.choice(
+                len(feats_path), num_test, replace=False)
+            test_idx = sorted(test_idx)
+            train_set = set(range(len(feats_path))) - set(test_idx)
+            train_idx = sorted(np.array(list(train_set)))
 
         test_df = pd.DataFrame(test_idx, columns=["id"])
         train_df = pd.DataFrame(train_idx, columns=["id"])
@@ -356,13 +365,13 @@ class ComicFeatureExtractor(FeatureExtractor):
 
 
 if __name__ == "__main__":
-    import pickle
-    with open("bowkm", "rb") as obj:
-        voc = pickle.load(obj)
+    # import pickle
+    # with open("bowkm", "rb") as obj:
+    #     voc = pickle.load(obj)
     fe = ImageFeatureExtractor(step=10, patchSize=100)
-    for file_path, x in fe.load_feature_for_each_file("train.csv", True):
-        res = voc.compute(x)
-        print(file_path, x.shape)
+    # for file_path, x in fe.load_feature_for_each_file("train.csv", True):
+    #     res = voc.compute(x)
+    #     print(file_path, x.shape)
     # fe.extract_save()
-    # fe.train_test_split(test_size=0.7)
+    fe.train_test_split(test_size=0.7)
     # feature = fe.load_feature("test.csv")
