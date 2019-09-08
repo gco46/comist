@@ -236,13 +236,14 @@ class BOWKMedoids(KMedoids):
             mem_save=mem_save
         )
 
-    def compute(self, X):
+    def compute(self, X, norm=False):
         # medoidからの距離を計算
         # shape = (num_cluster, num_dim)
         dist_to_medoids = cdist(X, self.medoids, metric=self.metric)
         count = np.argmin(dist_to_medoids, axis=1)
         hist = np.histogram(count, bins=self.n_clusters)[0]
-        hist = hist / X.shape[0]
+        if norm:
+            hist = hist / X.shape[0]
         return hist
 
 
