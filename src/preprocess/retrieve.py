@@ -99,6 +99,8 @@ def create_db_test():
     imgfe = fe.ImageFeatureExtractor(step=10)
     for file_path, x in imgfe.load_feature_for_each_file("train.csv", True):
         idx.add_to_index(file_path, x)
+    for file_path, x in imgfe.load_feature_for_each_file("test.csv", True):
+        idx.add_to_index(file_path, x)
     idx.db_commit()
 
 
