@@ -10,22 +10,28 @@ class FeatureExtractor(object):
     """
     cv2 objectを使用して画像から特徴量を抽出する
     """
+    # バイナリ特徴のリスト(バイナリ変換時の判定に使用)
+    BINARY_FEATS = ["orb", "brisk"]
+    # 特徴量毎のパラメータのデフォルト値を指定
+    # ひとまずスケールに関係するパラメータのみデフォルト値を設定
+    DEFAULT_PARAMS = {
+        "orb": {"patchSize": 31, "scaleFactor": 1.2},
+        "brisk": {"octaves": 3, "patternScale": 1.0},
+        "sift": {"contrastThreshold": 0.04,
+                 "edgeThreshold": 10,
+                 "sigma": 1.6}
+    }
 
     def __init__(self, root_path, feature_type, step, **kwargs):
         self.root_path = Path(root_path)
         self.feature_type = feature_type.lower()
         self.step = step
         self.kwargs = kwargs
-        # 特徴量毎のパラメータのデフォルト値を指定
-        # ひとまずスケールに関係するパラメータのみデフォルト値を設定
-        # gridで抽出するためthresholdは0とする
-        self.DEFAULT_PARAMS = {
-            "orb": {"patchSize": 31, "scaleFactor": 1.2},
-            "brisk": {"octaves": 3, "patternScale": 1.0},
-        }
+        self.feat_path = Path("../../data/features")
+        
+        # 特徴抽出に使用するインスタンス生成
         self._args_check()
         self._set_cv2_instance()
-        self.feat_path = Path("../../data/features")
 
     def _get_data_ids(self, path):
         """
@@ -48,7 +54,7 @@ class FeatureExtractor(object):
             feat_path = self._get_loadfile_path(id)
             feature = np.load(str(feat_path))
             feature_set += feature.tolist()
-        if convert:
+        if convert and self.feature_type in self.BINARY_FEATS:
             return self._convert_to_bin_feature(np.array(feature_set))
         else:
             return np.array(feature_set)
@@ -61,7 +67,7 @@ class FeatureExtractor(object):
         for id in data_ids:
             feat_path = self._get_loadfile_path(id)
             feature = np.load(str(feat_path))
-            if convert:
+            if convert and self.feature_type in self.BINARY_FEATS:
                 feature = self._convert_to_bin_feature(feature)
             yield feat_path, feature
 
@@ -92,10 +98,17 @@ class FeatureExtractor(object):
                 scaleFactor=params["scaleFactor"]
             )
         elif self.feature_type == "brisk":
+            # gridで抽出するためthresholdは0とする
             self.fe = cv2.BRISK_create(
                 thresh=0,
                 octaves=params["octaves"],
                 patternScale=params["patternScale"]
+            )
+        elif self.feature_type == "sift":
+            self.fe = cv2.xfeatures2d.SIFT_create(
+                contrastThreshold=params["contrastThreshold"],
+                edgeThreshold=params["edgeThreshold"],
+                sigma=params["sigma"]
             )
 
     def _convert_to_bin_feature(self, X):
