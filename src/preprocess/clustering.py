@@ -7,6 +7,34 @@ import matplotlib.pyplot as plt
 from joblib import Parallel, delayed
 import cv2
 from tqdm import tqdm
+from scipy.cluster.vq import kmeans, vq
+
+
+class BOWKMeans(object):
+    """
+    scipyのkmeansを使用したBOW用クラス
+    """
+
+    def __init__(self, n_clusters, kmeans_iter=20, threshold=1e-05):
+        self.centroids = None
+        self.n_clusters = n_clusters
+        self.kmeans_iter = kmeans_iter
+        self.threshold = threshold
+
+        self.idf = []
+
+    def fit(self, X):
+        self.centroids, distortion = kmeans(
+            X, self.n_clusters, self.kmeans_iter)
+
+    def compute(self, X, norm=False):
+        words, dist = vq(X, self.centroids)
+        hist = np.zeros((self.n_clusters,))
+        for w in words:
+            hist[w] += 1
+        if norm:
+            hist = hist / X.shape[0]
+        return hist
 
 
 class KMedoids(object):
