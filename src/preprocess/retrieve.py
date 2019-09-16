@@ -1,6 +1,8 @@
 import pickle
 import sqlite3 as sqlite
 import feature_extract as fe
+import numpy as np
+from operator import itemgetter
 
 
 class Indexer(object):
@@ -90,16 +92,45 @@ class Searcher(object):
 
         return [w[0] for w in tmp]
 
+    def get_imhistogram(self, imname):
+        im_id = self.con.execute(
+            "select rowid from imlist where filename=?", imname
+        ).fetchone()
+        s = self.con.execute(
+            "select histogram from imhistograms where rowid=?", im_id
+        ).fetchone()
+        return pickle.loads(s[0])
+
+    def query(self, imname):
+        if not isinstance(imname, tuple):
+            raise ValueError("imname must be tuple of str")
+        h = self.get_imhistogram(imname)
+        candidates = self.candidates_from_histogram(h)
+        matchscores = []
+        for imid in candidates:
+            cand_name = self.con.execute(
+                "select filename from imlist where rowid=?", (imid,)
+            ).fetchone()
+            cand_h = self.get_imhistogram(cand_name)
+            cand_dist = np.sqrt(np.sum((h - cand_h)**2))
+            matchscores.append((cand_dist, imid))
+        matchscores.sort()
+        return matchscores
+
 
 def create_db_test():
     with open("bowkm", "rb") as obj:
         voc = pickle.load(obj)
     idx = Indexer('test.db', voc)
     idx.create_tables()
-    imgfe = fe.ImageFeatureExtractor(step=10)
+    imgfe = fe.ImageFeatureExtractor(feature_type="sift", step=10)
+    file_feature = []
     for file_path, x in imgfe.load_feature_for_each_file("train.csv", True):
-        idx.add_to_index(file_path, x)
+        file_feature.append((file_path, x))
     for file_path, x in imgfe.load_feature_for_each_file("test.csv", True):
+        file_feature.append((file_path, x))
+    file_feature.sort(key=lambda x: x[0])
+    for file_path, x in file_feature:
         idx.add_to_index(file_path, x)
     idx.db_commit()
 
@@ -108,7 +139,7 @@ def search_test():
     with open("bowkm", "rb") as obj:
         voc = pickle.load(obj)
     search = Searcher('test.db', voc)
-    imgfe = fe.ImageFeatureExtractor(step=10)
+    imgfe = fe.ImageFeatureExtractor(feature_type="sift", step=20)
     for f_path, x in imgfe.load_feature_for_each_file("train.csv", True):
         print(f_path)
         iw = voc.compute(x)
@@ -117,6 +148,18 @@ def search_test():
     print(search.candidates_from_histogram(iw)[:10])
 
 
+def search_test_imquery():
+    with open("bowkm", "rb") as obj:
+        voc = pickle.load(obj)
+    search = Searcher('test.db', voc)
+    q = '../../data/features/bench/sift/step10/ukbench00052.npy'
+    print('try a query...')
+    result = search.query((q,))
+    for r in result[:20]:
+        print(r)
+
+
 if __name__ == "__main__":
     # create_db_test()
-    search_test()
+    # search_test()
+    search_test_imquery()
