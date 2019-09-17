@@ -84,9 +84,6 @@ class KMedoids(object):
         # init : list of tuple, [(score, medoids), ...]
         # length == self.init_search
         print("initialize medoids...")
-        # inits = []
-        # for i in range(self.init_search):
-        #     inits.append(self._init_medoids())
         inits = Parallel(n_jobs=self.n_jobs)(
             [delayed(self._init_medoids)() for i in range(self.init_search)])
         print("initialize done.")

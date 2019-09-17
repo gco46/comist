@@ -162,6 +162,27 @@ class FeatureExtractor(object):
         """
         return None
 
+    def _l2_normalization(self, X):
+        result = []
+        for v in X:
+            norm = np.linalg.norm(v)
+            if np.isclose(norm, 0):
+                norm = 1
+            result.append(list(v / norm))
+        result = np.array(result)
+        return result
+
+    def _standization(self, X):
+        result = []
+        for v in X:
+            mean = np.mean(v)
+            std = np.std(v)
+            if np.isclose(std, 0):
+                std = 1
+            result.append(list((v-mean)/std))
+        result = np.array(result)
+        return result
+
 
 class ImageFeatureExtractor(FeatureExtractor):
     def __init__(self, feature_type, step,  root_path="../../data/ukbench",
@@ -192,27 +213,6 @@ class ImageFeatureExtractor(FeatureExtractor):
         kp = self._get_keypoints(img)
         _, feature = self.fe.compute(img, kp)
         return feature
-
-    def _l2_normalization(self, X):
-        result = []
-        for v in X:
-            norm = np.linalg.norm(v)
-            if np.isclose(norm, 0):
-                norm = 1
-            result.append(list(v / norm))
-        result = np.array(result)
-        return result
-
-    def _standization(self, X):
-        result = []
-        for v in X:
-            mean = np.mean(v)
-            std = np.std(v)
-            if np.isclose(std, 0):
-                std = 1
-            result.append(list((v-mean)/std))
-        result = np.array(result)
-        return result
 
     def train_test_split(self, test_size, isUkbench=True):
         feats_path = list(self.save_feat_path.glob("*.npy"))
