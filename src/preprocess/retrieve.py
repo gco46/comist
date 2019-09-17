@@ -3,6 +3,7 @@ import sqlite3 as sqlite
 import feature_extract as fe
 import numpy as np
 from operator import itemgetter
+from pathlib import Path
 
 
 class Indexer(object):
@@ -94,7 +95,7 @@ class Searcher(object):
 
     def get_imhistogram(self, imname):
         im_id = self.con.execute(
-            "select rowid from imlist where filename=?", imname
+            "select rowid from imlist where filename like ?", imname
         ).fetchone()
         s = self.con.execute(
             "select histogram from imhistograms where rowid=?", im_id
@@ -102,9 +103,8 @@ class Searcher(object):
         return pickle.loads(s[0])
 
     def query(self, imname):
-        if not isinstance(imname, tuple):
-            raise ValueError("imname must be tuple of str")
-        h = self.get_imhistogram(imname)
+        query_pattern = ("%" + imname + "%",)
+        h = self.get_imhistogram(query_pattern)
         candidates = self.candidates_from_histogram(h)
         matchscores = []
         for imid in candidates:
@@ -130,8 +130,11 @@ def create_db_test():
     for file_path, x in imgfe.load_feature_for_each_file("test.csv", True):
         file_feature.append((file_path, x))
     file_feature.sort(key=lambda x: x[0])
+    image_root = "../../data/ukbench/"
     for file_path, x in file_feature:
-        idx.add_to_index(file_path, x)
+        file_path = Path(file_path)
+        tmp = image_root + file_path.stem + ".jpg"
+        idx.add_to_index(tmp, x)
     idx.db_commit()
 
 
@@ -152,9 +155,9 @@ def search_test_imquery():
     with open("bowkm", "rb") as obj:
         voc = pickle.load(obj)
     search = Searcher('test.db', voc)
-    q = '../../data/features/bench/sift/step10/ukbench00052.npy'
+    q = '00052'
     print('try a query...')
-    result = search.query((q,))
+    result = search.query(q)
     for r in result[:20]:
         print(r)
 
