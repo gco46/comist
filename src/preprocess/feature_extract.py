@@ -10,41 +10,66 @@ class FeatureExtractor(object):
     """
     cv2 objectを使用して画像から特徴量を抽出する
     """
+    # バイナリ特徴のリスト(バイナリ変換時の判定に使用)
+    BINARY_FEATS = ["orb", "brisk"]
+    # 特徴量毎のパラメータのデフォルト値を指定
+    # ひとまずスケールに関係するパラメータのみデフォルト値を設定
+    DEFAULT_PARAMS = {
+        "orb": {"patchSize": 31, "scaleFactor": 1.2},
+        "brisk": {"octaves": 3, "patternScale": 1.0},
+        "sift": {"contrastThreshold": 0.04,
+                 "edgeThreshold": 10,
+                 "sigma": 1.6}
+    }
 
     def __init__(self, root_path, feature_type, step, **kwargs):
         self.root_path = Path(root_path)
         self.feature_type = feature_type.lower()
         self.step = step
         self.kwargs = kwargs
-        # 特徴量毎のパラメータのデフォルト値を指定
-        # ひとまずスケールに関係するパラメータのみデフォルト値を設定
-        # gridで抽出するためthresholdは0とする
-        self.DEFAULT_PARAMS = {
-            "orb": {"patchSize": 31, "scaleFactor": 1.2},
-            "brisk": {"octaves": 3, "patternScale": 1.0},
-        }
+        self.feat_path = Path("../../data/features")
+        
+        # 特徴抽出に使用するインスタンス生成
         self._args_check()
         self._set_cv2_instance()
-        self.feat_path = Path("../../data/features")
+
+    def _get_data_ids(self, path):
+        """
+        path: str, id情報を含むファイルへのパス
+        """
+        data_ids = pd.read_csv(osp.join(self.save_feat_path, path))
+        data_ids = data_ids["id"]
+        data_ids = data_ids.values.reshape(-1).tolist()
+        return data_ids
 
     def load_feature(self, csv_path, convert=False):
         """
         特徴量をファイルから読み込む
         csv_path: str, 読み込む特徴量のcsvファイル
+        convert: bool, Trueなら特徴をバイナリ(0 or 1)に変換する(np.uint8)
         """
-        data_ids = pd.read_csv(osp.join(self.save_feat_path, csv_path))
-        data_ids = data_ids["id"]
-        data_ids = data_ids.values.reshape(-1).tolist()
-        dir = self._make_params_info_str()
+        data_ids = self._get_data_ids(csv_path)
         feature_set = []
         for id in data_ids:
             feat_path = self._get_loadfile_path(id)
             feature = np.load(str(feat_path))
             feature_set += feature.tolist()
-        if convert:
+        if convert and self.feature_type in self.BINARY_FEATS:
             return self._convert_to_bin_feature(np.array(feature_set))
         else:
             return np.array(feature_set)
+
+    def load_feature_for_each_file(self, csv_path, convert=False):
+        """
+        ファイル単位でfeatureを返すiteratorオブジェクト
+        """
+        data_ids = self._get_data_ids(csv_path)
+        for id in data_ids:
+            feat_path = self._get_loadfile_path(id)
+            feature = np.load(str(feat_path))
+            if convert and self.feature_type in self.BINARY_FEATS:
+                feature = self._convert_to_bin_feature(feature)
+            yield feat_path, feature
 
     def _args_check(self):
         """
@@ -73,10 +98,17 @@ class FeatureExtractor(object):
                 scaleFactor=params["scaleFactor"]
             )
         elif self.feature_type == "brisk":
+            # gridで抽出するためthresholdは0とする
             self.fe = cv2.BRISK_create(
                 thresh=0,
                 octaves=params["octaves"],
                 patternScale=params["patternScale"]
+            )
+        elif self.feature_type == "sift":
+            self.fe = cv2.xfeatures2d.SIFT_create(
+                contrastThreshold=params["contrastThreshold"],
+                edgeThreshold=params["edgeThreshold"],
+                sigma=params["sigma"]
             )
 
     def _convert_to_bin_feature(self, X):
@@ -160,13 +192,22 @@ class ImageFeatureExtractor(FeatureExtractor):
         _, feature = self.fe.compute(img, kp)
         return feature
 
-    def train_test_split(self, test_size):
-        feats_path = self.save_feat_path.glob("*.npy")
-        num_test = int(len(feats_path) * test_size)
-        test_idx = np.random.choice(len(feats_path), num_test, replace=False)
-        test_idx = sorted(test_idx)
-        train_set = set(range(len(feats_path))) - set(test_idx)
-        train_idx = np.array(list(train_set))
+    def train_test_split(self, test_size, isUkbench=True):
+        feats_path = list(self.save_feat_path.glob("*.npy"))
+        if isUkbench:
+            # ukbench datasetの場合、画像四枚で一組なので
+            # 各クラスでtrain:1, test:3とする
+            feats_path.sort()
+            train_idx = np.arange(0, len(feats_path), 4)
+            test_idx = set(range(len(feats_path))) - set(train_idx)
+            test_idx = sorted(np.array(list(test_idx)))
+        else:
+            num_test = int(len(feats_path) * test_size)
+            test_idx = np.random.choice(
+                len(feats_path), num_test, replace=False)
+            test_idx = sorted(test_idx)
+            train_set = set(range(len(feats_path))) - set(test_idx)
+            train_idx = sorted(np.array(list(train_set)))
 
         test_df = pd.DataFrame(test_idx, columns=["id"])
         train_df = pd.DataFrame(train_idx, columns=["id"])
@@ -181,6 +222,11 @@ class ImageFeatureExtractor(FeatureExtractor):
         self.feats_path = sorted(self.feats_path)
         feature = super().load_feature(csv_path, convert=convert)
         return feature
+
+    def load_feature_for_each_file(self, csv_path, convert=False):
+        self.feats_path = list(self.save_feat_path.glob("*.npy"))
+        self.feats_path = sorted(self.feats_path)
+        return super().load_feature_for_each_file(csv_path, convert=convert)
 
     def _get_loadfile_path(self, id):
         """
@@ -332,7 +378,13 @@ class ComicFeatureExtractor(FeatureExtractor):
 
 
 if __name__ == "__main__":
-    fe = ComicFeatureExtractor(step=200, patchSize=200)
-    fe.extract_save()
+    # import pickle
+    # with open("bowkm", "rb") as obj:
+    #     voc = pickle.load(obj)
+    fe = ImageFeatureExtractor(step=10, patchSize=100)
+    # for file_path, x in fe.load_feature_for_each_file("train.csv", True):
+    #     res = voc.compute(x)
+    #     print(file_path, x.shape)
+    # fe.extract_save()
     fe.train_test_split(test_size=0.7)
-    feature = fe.load_feature("test.csv")
+    # feature = fe.load_feature("test.csv")

@@ -9,7 +9,6 @@ verify_ssl = true
 ipython = "*"
 jupyter = "*"
 jupytext = "*"
-opencv-contrib-python = "*"
 pillow = "*"
 matplotlib = "*"
 scikit-learn = "*"
@@ -24,6 +23,7 @@ scikit-image = "*"
 pandas = "==0.24.2"
 tqdm = "*"
 pylint = "*"
+opencv-contrib-python = "==3.4.2.17"
 
 [requires]
 python_version = "3.7"
