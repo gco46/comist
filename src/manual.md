@@ -2,6 +2,8 @@
 
 ## スクレイピング手順
 
+### Linux
+
 1. mongo DBを起動する
    `systemctl start mongod.service`
    (停止時は`systemctl stop mongod.service`)
@@ -31,7 +33,3 @@ category一覧↓
 3. Comicsディレクトリに自動でカテゴリ別のディレクトリが作成され、保存される
 
 
-
-### rateファイル
-
-`MakeRateFile.py`の4行目`target_dir`を任意のカテゴリに指定することで、そのカテゴリディレクトリ内に`rate.csv`が作成される
