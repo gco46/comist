@@ -17,4 +17,4 @@ class ComicImageItem(scrapy.Item):
     continuous_work = scrapy.Field()    # 連作のリンク(シンボリックリンク用)
     num_images = scrapy.Field()         # 漫画のページ数
     tags = scrapy.Field()               # 漫画が持つtag情報
-    category = scrapy.Field()           # カテゴリ
+    category = scrapy.Field()           # カテゴリ(日本語)

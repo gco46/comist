@@ -19,7 +19,7 @@ class MongoPipeline(object):
     def open_spider(self, spider):
         self.client = MongoClient('localhost', 27017)
         self.db = self.client['ScrapedData']
-        self.collection = self.db['eromanga-night']
+        self.collection = self.db['eromanga_night']
 
     def close_spider(self, spider):
         self.client.close()
