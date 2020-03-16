@@ -11,13 +11,14 @@ from ComicScrapy.site_data import CssSelectors as Css
 
 class GetComicsSpider(scrapy.Spider):
     name = 'GetComics'
-    allowed_domains = ['eromanga-night.com']
+    allowed_domains = ['eromanga-yoru.com']
     start_urls = []
-    base_url = "http://eromanga-night.com/main/category/"
+    base_url = "http://eromanga-yoru.com/main/category/"
 
     def __init__(self, category="", *args, **kwargs):
         super(GetComicsSpider, self).__init__(*args, **kwargs)
         category = category.split(",")
+        # category 引数チェック
         for c in category:
             self.start_urls.append(
                 urllib.parse.urljoin(self.base_url, c.strip()))

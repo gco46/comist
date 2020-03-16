@@ -2,6 +2,12 @@
 
 ## スクレイピング手順
 
+### Windows
+
+1. mongoDBを起動する  
+   `mongod --dbpath D:\path\to\db_data\dir --logpath D:\hoge\mongodb.log`
+2. rootディレクトリでクロールを実施
+
 ### Linux
 
 1. mongo DBを起動する
