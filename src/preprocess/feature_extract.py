@@ -22,13 +22,13 @@ class FeatureExtractor(object):
                  "sigma": 1.6}
     }
 
-    def __init__(self, root_path, feature_type, step, **kwargs):
+    def __init__(self, feature_type, step, root_path, **kwargs):
         self.root_path = Path(root_path)
         self.feature_type = feature_type.lower()
         self.step = step
         self.kwargs = kwargs
         self.feat_path = Path("../../data/features")
-        
+
         # 特徴抽出に使用するインスタンス生成
         self._args_check()
         self._set_cv2_instance()
@@ -42,7 +42,7 @@ class FeatureExtractor(object):
         data_ids = data_ids.values.reshape(-1).tolist()
         return data_ids
 
-    def load_feature(self, csv_path, convert=False):
+    def load_feature(self, csv_path, convert=True):
         """
         特徴量をファイルから読み込む
         csv_path: str, 読み込む特徴量のcsvファイル
@@ -59,7 +59,7 @@ class FeatureExtractor(object):
         else:
             return np.array(feature_set)
 
-    def load_feature_for_each_file(self, csv_path, convert=False):
+    def load_feature_for_each_file(self, csv_path, convert=True):
         """
         ファイル単位でfeatureを返すiteratorオブジェクト
         """
@@ -162,14 +162,35 @@ class FeatureExtractor(object):
         """
         return None
 
+    def _l2_normalization(self, X):
+        result = []
+        for v in X:
+            norm = np.linalg.norm(v)
+            if np.isclose(norm, 0):
+                norm = 1
+            result.append(list(v / norm))
+        result = np.array(result)
+        return result
+
+    def _standization(self, X):
+        result = []
+        for v in X:
+            mean = np.mean(v)
+            std = np.std(v)
+            if np.isclose(std, 0):
+                std = 1
+            result.append(list((v-mean)/std))
+        result = np.array(result)
+        return result
+
 
 class ImageFeatureExtractor(FeatureExtractor):
-    def __init__(self, root_path="../../data/ukbench",
-                 feature_type="orb", step=50, **kwargs):
+    def __init__(self, feature_type, step,  root_path="../../data/ukbench",
+                 **kwargs):
         super(ImageFeatureExtractor, self).__init__(
-            root_path,
             feature_type,
             step,
+            root_path,
             **kwargs
         )
         step_info = self._make_params_info_str()
@@ -181,6 +202,7 @@ class ImageFeatureExtractor(FeatureExtractor):
         for img_path in self.root_path.iterdir():
             if img_path.suffix == ".jpg":
                 feature = self._extract_image_feat(img_path)
+                feature = self._l2_normalization(feature)
                 self._save_feature(
                     feature,
                     self.save_feat_path.joinpath(img_path.stem + ".npy")
@@ -216,14 +238,14 @@ class ImageFeatureExtractor(FeatureExtractor):
         train_df.to_csv(
             str(self.save_feat_path.joinpath("train.csv")), index=False)
 
-    def load_feature(self, csv_path, convert=False):
+    def load_feature(self, csv_path, convert=True):
         # 特徴量ファイル一覧を先に読み込む
         self.feats_path = list(self.save_feat_path.glob("*.npy"))
         self.feats_path = sorted(self.feats_path)
         feature = super().load_feature(csv_path, convert=convert)
         return feature
 
-    def load_feature_for_each_file(self, csv_path, convert=False):
+    def load_feature_for_each_file(self, csv_path, convert=True):
         self.feats_path = list(self.save_feat_path.glob("*.npy"))
         self.feats_path = sorted(self.feats_path)
         return super().load_feature_for_each_file(csv_path, convert=convert)
@@ -240,12 +262,12 @@ class ComicFeatureExtractor(FeatureExtractor):
     extract_save:特徴量を漫画単位でnp.saveで保存する
     """
 
-    def __init__(self, root_path="../../data/Comics",
-                 feature_type="orb", step=50, **kwargs):
+    def __init__(self, feature_type, step, root_path="../../data/Comics",
+                 **kwargs):
         super(ComicFeatureExtractor, self).__init__(
-            root_path,
             feature_type,
             step,
+            root_path,
             **kwargs
         )
         self.root_path = Path(root_path)
@@ -266,7 +288,7 @@ class ComicFeatureExtractor(FeatureExtractor):
             if category_path.is_dir():
                 self._get_category_feature(category_path)
 
-    def load_feature(self, csv_path, convert=False):
+    def load_feature(self, csv_path, convert=True):
         """
         特徴量をファイルから読み込む
         csv_path: str, 読み込む特徴量のcomic idが書かれたcsvファイルへのパス
@@ -381,10 +403,10 @@ if __name__ == "__main__":
     # import pickle
     # with open("bowkm", "rb") as obj:
     #     voc = pickle.load(obj)
-    fe = ImageFeatureExtractor(step=10, patchSize=100)
+    fe = ImageFeatureExtractor(step=10, feature_type="sift")
     # for file_path, x in fe.load_feature_for_each_file("train.csv", True):
     #     res = voc.compute(x)
     #     print(file_path, x.shape)
-    # fe.extract_save()
+    fe.extract_save()
     fe.train_test_split(test_size=0.7)
     # feature = fe.load_feature("test.csv")

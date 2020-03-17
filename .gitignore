@@ -1,11 +1,11 @@
 .vscode/
 __pycache__/
 lib_test/
-readme.md
 .ipynb_checkpoints/
 .gitignore
 Comics/
 features/
 ukbench/
+db/
 mongodb/
 .scrapy/

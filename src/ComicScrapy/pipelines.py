@@ -19,7 +19,7 @@ class MongoPipeline(object):
     def open_spider(self, spider):
         self.client = MongoClient('localhost', 27017)
         self.db = self.client['ScrapedData']
-        self.collection = self.db['eromanga-night']
+        self.collection = self.db['eromanga_night']
 
     def close_spider(self, spider):
         self.client.close()
@@ -34,10 +34,13 @@ class MongoPipeline(object):
 
 
 class SymboliclinkPipeline(object):
+    # データ保存先
     DataPath = 'project/ComicCluster/data'
     AbsDataPath = osp.join(osp.expanduser('~'), DataPath)
     ComicDir = myCfg.IMAGES_STORE.split("/")[-1]
+    # シンボリックリンク名(次の作品)
     NextSym = "next"
+    # シンボリックリンク名(前の作品)
     PreviousSym = "privious"
 
     def process_item(self, item, spider):
@@ -47,12 +50,15 @@ class SymboliclinkPipeline(object):
         cont_list = item['continuous_work']
         entry_url = item['entry_url']
 
+        # 次の作品のみある場合
         if cont_list.index(entry_url) == 0:
             next_entry_url = cont_list[cont_list.index(entry_url) + 1]
             self.make_symlink(next_entry_url, entry_url, self.NextSym)
+        # 前の作品のみある場合
         elif cont_list.index(entry_url) + 1 == len(cont_list):
             previous_entry_url = cont_list[cont_list.index(entry_url) - 1]
             self.make_symlink(previous_entry_url, entry_url, self.PreviousSym)
+        # 次の作品、前の作品がある場合
         else:
             previous_entry_url = cont_list[cont_list.index(entry_url) - 1]
             next_entry_url = cont_list[cont_list.index(entry_url) + 1]
