@@ -13,7 +13,17 @@ class GetComicsSpider(scrapy.Spider):
     name = 'GetComics'
     allowed_domains = ['eromanga-yoru.com']
     start_urls = []
-    base_url = "http://eromanga-yoru.com/main/category/"
+    base_url = "https://eromanga-yoru.com/category/"
+    # リクエストヘッダ情報
+    headers = {
+        "Cache-Control": "max-age=0",
+        "Connection": "keep-alive",
+        "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+                       "AppleWebKit/537.36 (KHTML, like Gecko) "
+                       "Chrome/80.0.3987.132 Safari/537.36"),
+        "Accept-Encoding": "gzip, deflate, br",
+        "Accept-Language": "ja,en-US;q=0.9,en;q=0.8",
+    }
 
     def __init__(self, category="", *args, **kwargs):
         super(GetComicsSpider, self).__init__(*args, **kwargs)
@@ -26,14 +36,26 @@ class GetComicsSpider(scrapy.Spider):
             raise ValueError
 
     def parse(self, response):
+        """
+        一覧ページのリクエストを投げる
+        """
+        # 詳細ページリクエストのループ
         for entry_url in response.css(Css.to_detail_page).extract():
-            yield scrapy.Request(entry_url, callback=self.entry_parse)
+            yield scrapy.Request(entry_url,
+                                 callback=self.entry_parse,
+                                 headers=self.headers)
+        # 一覧ページに次のページがある場合、リクエストを投げる
         next_link = response.css(Css.to_next_page).extract_first()
         if next_link is None:
             return
-        yield scrapy.Request(next_link, callback=self.parse)
+        yield scrapy.Request(next_link,
+                             callback=self.parse,
+                             headers=self.headers)
 
     def entry_parse(self, response):
+        """
+        詳細ページからitem情報を取得
+        """
         item = ComicImageItem()
         # category/comic_key をURLから取得してディレクトリに使用
         dir_name = response.url.split("/")[-2:]
