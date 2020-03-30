@@ -24,6 +24,7 @@ pandas = "==0.24.2"
 tqdm = "*"
 pylint = "*"
 opencv-contrib-python = "==3.4.2.17"
+colorama = "*"
 
 [requires]
 python_version = "3.7"
