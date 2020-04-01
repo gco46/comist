@@ -11,3 +11,10 @@ class CssSelectors(object):
     to_category = '.post-categories li a::text'
     # 詳細ページ -> 連作url
     to_continuous = 'div.box_rensaku li a::attr(href)'
+    # 詳細ページ -> 見出し(作者+タイトル)
+    to_caption = '.entry-title a::text'
+
+
+class REpattern(object):
+    # captionから作者とタイトルを抽出する用
+    author_title = "【.*】"

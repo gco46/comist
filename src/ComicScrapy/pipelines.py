@@ -12,6 +12,8 @@ from pymongo import MongoClient
 from scrapy.exceptions import DropItem
 import os
 import os.path as osp
+import platform
+from pathlib import Path
 import ComicScrapy.settings as myCfg
 
 
@@ -35,9 +37,7 @@ class MongoPipeline(object):
 
 class SymboliclinkPipeline(object):
     # データ保存先
-    DataPath = 'project/ComicCluster/data'
-    AbsDataPath = osp.join(osp.expanduser('~'), DataPath)
-    ComicDir = myCfg.IMAGES_STORE.split("/")[-1]
+    AbsDataPath = Path(myCfg.IMAGES_STORE).resolve()
     # シンボリックリンク名(次の作品)
     NextSym = "next"
     # シンボリックリンク名(前の作品)
@@ -67,15 +67,23 @@ class SymboliclinkPipeline(object):
         return item
 
     def make_symlink(self, target_url, base_url, link_name):
+        # リンクターゲットのカテゴリ、idを取得
         tgt_cat, tgt_id = target_url.split("/")[-2:]
         base_cat, base_id = base_url.split("/")[-2:]
-        sym_src = osp.join(
-            self.AbsDataPath, self.ComicDir, tgt_cat, tgt_id
-        )
-        sym_name = osp.join(
-            self.ComicDir, base_cat, base_id, link_name
-        )
-        os.symlink(sym_src, sym_name)
+        # ターゲット(sym_src)とリンクのファイル名(sym_name)を取得
+        sym_src_Path = self.AbsDataPath / tgt_cat / tgt_id
+        sym_name_Path = self.AbsDataPath / base_cat / base_id / link_name
+        if platform.system() == "Windows":
+            # windowsではショートカットを作成
+            sym_name_Path = sym_name_Path.with_name(link_name + ".lnk")
+            import win32com.client
+            shell = win32com.client.Dispatch("WScript.Shell")
+            shortcut = shell.CreateShortcut(str(sym_name_Path))
+            shortcut.TargetPath = str(sym_src_Path)
+            shortcut.save()
+        else:
+            # unix系ではシンボリックリンクを作成
+            os.symlink(str(sym_src_Path), str(sym_name_Path))
 
 
 class SaveComicPipeline(ImagesPipeline):
