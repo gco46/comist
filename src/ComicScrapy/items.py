@@ -9,10 +9,10 @@ import scrapy
 
 
 class ComicImageItem(scrapy.Item):
-    # define the fields for your item here like:
-    # name = scrapy.Field()
     comic_key = scrapy.Field()          # 固有ID(URL末尾6桁)
     entry_url = scrapy.Field()          # 漫画エントリのURL
+    title = scrapy.Field()              # 漫画タイトル
+    author = scrapy.Field()             # 作者名
     image_urls = scrapy.Field()         # 保存する漫画画像のURL
     continuous_work = scrapy.Field()    # 連作のリンク(シンボリックリンク用)
     num_images = scrapy.Field()         # 漫画のページ数
