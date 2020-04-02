@@ -18,6 +18,10 @@ import ComicScrapy.settings as myCfg
 
 
 class MongoPipeline(object):
+    """
+    MongoDB登録用パイプライン
+    """
+
     def open_spider(self, spider):
         self.client = MongoClient('localhost', 27017)
         self.db = self.client['ScrapedData']
@@ -28,6 +32,8 @@ class MongoPipeline(object):
 
     def process_item(self, item, spider):
         comic_key = item['comic_key']
+        # 既にDB登録されたitemはスキップする。
+        # DB登録の有無はcomic_keyを使用して判断
         comicExists = self.collection.find_one({'comic_key': comic_key})
         if comicExists:
             raise DropItem('key:{0} is already exists.'.format(comic_key))
@@ -36,6 +42,9 @@ class MongoPipeline(object):
 
 
 class SymboliclinkPipeline(object):
+    """
+    シンボリックリンク・ショートカット作成用パイプライン
+    """
     # データ保存先
     AbsDataPath = Path(myCfg.IMAGES_STORE).resolve()
     # シンボリックリンク名(次の作品)
