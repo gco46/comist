@@ -9,7 +9,7 @@ import scrapy
 
 
 class ComicImageItem(scrapy.Item):
-    comic_key = scrapy.Field()          # 固有ID(URL末尾6桁)
+    comic_key = scrapy.Field()          # 漫画の識別子(カテゴリ/URL末尾6桁)
     entry_url = scrapy.Field()          # 漫画エントリのURL
     title = scrapy.Field()              # 漫画タイトル
     author = scrapy.Field()             # 作者名

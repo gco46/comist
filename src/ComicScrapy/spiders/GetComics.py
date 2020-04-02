@@ -57,36 +57,86 @@ class GetComicsSpider(scrapy.Spider):
         詳細ページからitem情報を取得
         """
         item = ComicImageItem()
-        # category/comic_key をURLから取得してディレクトリに使用
+        item['comic_key'] = self._get_commic_key(response)
+        item['entry_url'] = self._get_entry_url(response)
+        item['author'], item['title'] = self._get_author_and_title(response)
+        item['image_urls'] = self._get_image_urls(response)
+        item['num_images'] = len(item['image_urls'])
+        item['tags'] = self._get_tags(response)
+        item['category'] = self._get_category(response)
+        item['continuous_work'] = self._get_continuous_work(response)
+        return item
+
+    def _get_commic_key(self, response):
+        """
+        itemに追加する漫画の識別子をURLから取得する
+        input: response object
+        output: str, like 'category/comic_id'
+        """
         dir_name = response.url.split("/")[-2:]
-        item['comic_key'] = "/".join(dir_name)
-        item['entry_url'] = response.url
-        # タイトル, 作者名を見出しから取得し、itemに追加
-        caption = response.css(Css.to_caption).extract()[0]
+        comic_key = "/".join(dir_name)
+        return comic_key
+
+    def _get_entry_url(self, response):
+        """
+        itemに追加する漫画詳細ページのurlを取得する
+        """
+        return response.url
+
+    def _get_author_and_title(self, response):
+        """
+        itemに追加するタイトル、作者名を見出しから取得する
+        input: response object
+        output: list, like [author, title]
+        """
+        # extract_first()で最初にマッチした要素を取得
+        caption = response.css(Css.to_caption).extract_first()
         author_title = re.search(Ptn.author_title, caption).group(0)
         # 【(作者):(タイトル)】の文字列から作者とタイトルを抽出
+        # 【】を除く文字列を抜き出し、:(コロン)を区切り文字として抽出
         author_title = author_title[1:-1].split(":")
-        item['author'] = author_title[0]
-        item['title'] = author_title[1]
-        # css selectorで画像を指定してitemに追加
-        item['image_urls'] = []
-        for img_url in response.css(Css.to_images).extract():
-            item['image_urls'].append(img_url)
-        item['num_images'] = len(item['image_urls'])
-        # tag情報取得
-        # ページ上部と下部で二重にtag情報が取得されるため、半分だけitemに追加
+        return author_title
+
+    def _get_image_urls(self, response):
+        """
+        itemに追加する漫画画像のurlを取得する
+        input: response object
+        output: list, it contains urls(str) of comic images
+        """
+        image_urls = []
+        for url in response.css(Css.to_images).extract():
+            image_urls.append(url)
+        return image_urls
+
+    def _get_tags(self, response):
+        """
+        itemに追加するタグ情報を取得する
+        input: response object
+        output: list, contains tags(str)
+        """
         tags = response.css(Css.to_tags).extract()
-        item['tags'] = tags[len(tags)//2:]
-        # category取得
-        item['category'] = response.css(Css.to_category).extract_first()
-        # 連作の情報取得
         # ページ上部と下部で二重にtag情報が取得されるため、半分だけitemに追加
+        tags = tags[len(tags)//2:]
+        return tags
+
+    def _get_category(self, response):
+        """
+        itemに追加するカテゴリを取得する
+        input: response object
+        output: str, category (in japanese)
+        """
+        return response.css(Css.to_category).extract_first()
+
+    def _get_continuous_work(self, response):
+        """
+        itemに追加する連作情報を取得する
+        """
+        # ページ上部と下部で二重に連作情報が取得されるため、半分だけitemに追加
         cont_list = response.css(Css.to_continuous).extract()
         cont_list = cont_list[len(cont_list) // 2:]
         # リダイレクトしたURLを取得するために一度リクエストを送り、
-        # 返ってきたURLを連作情報としてitemに追加
+        # 返ってきたURLを連作情報として返す
         for idx in range(len(cont_list)):
-            response = requests.get(cont_list[idx])
-            cont_list[idx] = response.url
-        item['continuous_work'] = cont_list
-        return item
+            response_redirect = requests.get(cont_list[idx])
+            cont_list[idx] = response_redirect.url
+        return cont_list
