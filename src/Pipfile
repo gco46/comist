@@ -25,6 +25,7 @@ tqdm = "*"
 pylint = "*"
 opencv-contrib-python = "==3.4.2.17"
 colorama = "*"
+wxpython = "*"
 
 [requires]
 python_version = "3.7"
