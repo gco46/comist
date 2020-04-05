@@ -27,8 +27,29 @@ class GetComicsSpider(scrapy.Spider):
         "Accept-Language": "ja,en-US;q=0.9,en;q=0.8",
     }
 
-    def __init__(self, category="", *args, **kwargs):
+    def __init__(self, category="", test_crawl=0,
+                 init_db=0, *args, **kwargs):
+        """
+        scrapy crawl GetComics 引数
+        category: str, カンマ区切りでカテゴリを指定
+        test_crawl: int, クロールの機能確認実施フラグ
+                         trueの場合、自動で init_db=true となる
+        init_db: int, DBの初期化フラグ
+        """
         super(GetComicsSpider, self).__init__(*args, **kwargs)
+        self.test_crawl = int(test_crawl)
+        self.init_db = init_db
+        # 機能確認では指定のエントリーのみクロールする
+        if self.test_crawl:
+            # 機能確認時はDBを初期化
+            self.init_db = 1
+            self.start_urls.append(
+                urllib.parse.urljoin(self.base_url, "eromanga-night/68563")
+            )
+            self.start_urls.append(
+                urllib.parse.urljoin(self.base_url, "kinshinsoukan/1992")
+            )
+            return
         category = category.split(",")
         # category 引数チェック
         for c in category:
@@ -41,6 +62,12 @@ class GetComicsSpider(scrapy.Spider):
         """
         一覧ページのリクエストを投げる
         """
+        # 機能確認では指定のエントリーのみクロールする
+        if self.test_crawl:
+            yield scrapy.Request(response.url,
+                                 callback=self.entry_parse,
+                                 headers=self.headers)
+            return
         # 詳細ページリクエストのループ
         for entry_url in response.css(Css.to_detail_page).extract():
             yield scrapy.Request(entry_url,

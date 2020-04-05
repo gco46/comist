@@ -24,6 +24,11 @@ class MongoPipeline(object):
 
     def open_spider(self, spider):
         self.client = MongoClient('localhost', 27017)
+        # scrapy crawl GetComics で init_db 指定の場合
+        # DBを初期化する
+        if spider.init_db:
+            print("----- initialized DB -----")
+            self.client.drop_database('ScrapedData')
         self.db = self.client['ScrapedData']
         self.collection = self.db['eromanga_night']
 
