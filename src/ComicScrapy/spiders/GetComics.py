@@ -16,6 +16,22 @@ class GetComicsSpider(scrapy.Spider):
     allowed_domains = ['eromanga-yoru.com']
     start_urls = []
     base_url = "https://eromanga-yoru.com/"
+    category_list = [
+        "eromanga-night",
+        "gyaru",
+        "hinnyu",
+        "jingai-kemono",
+        "jk-jc",
+        "jyukujyo-hitozuma",
+        "kinshinsoukan",
+        "kosupure",
+        "kyonyu-binyu",
+        "netorare-netori",
+        "ol-sister",
+        "onesyota",
+        "rape"
+        "rezu-yuri",
+    ]
     # リクエストヘッダ情報
     headers = {
         # "Cache-Control": "max-age=0",
@@ -53,10 +69,12 @@ class GetComicsSpider(scrapy.Spider):
         category = category.split(",")
         # category 引数チェック
         for c in category:
+            if c not in self.category_list:
+                raise ValueError(c + " is not in category list.")
             self.start_urls.append(
                 urllib.parse.urljoin(self.base_url, c.strip()))
         if len(self.start_urls) == 0:
-            raise ValueError
+            raise ValueError("you must choose at least one category.")
 
     def parse(self, response):
         """
