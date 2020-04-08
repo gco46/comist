@@ -9,7 +9,7 @@ import scrapy
 from scrapy.pipelines.images import ImagesPipeline
 from scrapy.utils.misc import md5sum
 from pymongo import MongoClient
-from scrapy.exceptions import DropItem
+from scrapy.exceptions import DropItem, CloseSpider
 import os
 import os.path as osp
 import platform
@@ -21,6 +21,10 @@ class MongoPipeline(object):
     """
     MongoDB登録用パイプライン
     """
+    # 重複itemを許容する数
+    MAX_DUP = 5
+    # 重複itemカウント用変数
+    duplicate_count = 0
 
     def open_spider(self, spider):
         self.client = MongoClient('localhost', 27017)
@@ -41,6 +45,12 @@ class MongoPipeline(object):
         # DB登録の有無はcomic_keyを使用して判断
         comicExists = self.collection.find_one({'comic_key': comic_key})
         if comicExists:
+            if spider.end_crawl:
+                print("----- detected duplicated item -----")
+                self.duplicate_count += 1
+            if self.duplicate_count >= self.MAX_DUP:
+                print("----- end crawling -----")
+                spider.stop_crawling()
             raise DropItem('key:{0} is already exists.'.format(comic_key))
         self.collection.insert_one(dict(item))
         return item

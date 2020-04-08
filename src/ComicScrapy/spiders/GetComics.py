@@ -2,6 +2,7 @@
 import scrapy
 from scrapy.spiders import CrawlSpider, Rule
 from scrapy.linkextractors import LinkExtractor
+from scrapy.exceptions import CloseSpider
 from ComicScrapy.items import ComicImageItem
 import urllib
 from pymongo import MongoClient
@@ -31,6 +32,7 @@ class GetComicsSpider(scrapy.Spider):
         "onesyota",
         "rape"
         "rezu-yuri",
+        "front"                 # 最新のエントリから取得
     ]
     # リクエストヘッダ情報
     headers = {
@@ -44,21 +46,24 @@ class GetComicsSpider(scrapy.Spider):
     }
 
     def __init__(self, category="", test_crawl=0,
-                 init_db=0, *args, **kwargs):
+                 init_db=0, end_crawl=0, *args, **kwargs):
         """
         scrapy crawl GetComics 引数
         category: str, カンマ区切りでカテゴリを指定
         test_crawl: int, クロールの機能確認実施フラグ
                          trueの場合、自動で init_db=true となる
         init_db: int, DBの初期化フラグ
+        end_crawl: int, 既にDB登録済みのアイテムを取得した際にcrawlを停止する
         """
         super(GetComicsSpider, self).__init__(*args, **kwargs)
+        # 引数はstr型となるため、キャストしてメンバ代入
         self.test_crawl = int(test_crawl)
-        self.init_db = init_db
+        self.init_db = int(init_db)
+        self.end_crawl = int(end_crawl)
+        self.end_flag = False
+
         # 機能確認では指定のエントリーのみクロールする
         if self.test_crawl:
-            # 機能確認時はDBを初期化
-            self.init_db = 1
             self.start_urls.append(
                 urllib.parse.urljoin(self.base_url, "eromanga-night/68563")
             )
@@ -66,43 +71,58 @@ class GetComicsSpider(scrapy.Spider):
                 urllib.parse.urljoin(self.base_url, "kinshinsoukan/1992")
             )
             return
-        category = category.split(",")
+        # category引数指定があった場合はリスト化
+        if category:
+            category = category.split(",")
+        else:
+            category = []
         # category 引数チェック
         for c in category:
             if c not in self.category_list:
                 raise ValueError(c + " is not in category list.")
             self.start_urls.append(
                 urllib.parse.urljoin(self.base_url, c.strip()))
-        if len(self.start_urls) == 0:
-            raise ValueError("you must choose at least one category.")
 
     def parse(self, response):
         """
         一覧ページのリクエストを投げる
         """
-        # 機能確認では指定のエントリーのみクロールする
+        # 機能確認時処理(デバッグ用) -------------------
+        # 特定エントリーのみリクエスト
         if self.test_crawl:
             yield scrapy.Request(response.url,
                                  callback=self.entry_parse,
                                  headers=self.headers)
-            return
+        # --------------------------------------------
+
+        # DB登録済みitem検知後、
+        if self.end_flag:
+            raise CloseSpider('duplicated item is detected, end crawling')
+
+        # 通常時処理 ----------------------------------
         # 詳細ページリクエストのループ
         for entry_url in response.css(Css.to_detail_page).extract():
+            print(entry_url)
             yield scrapy.Request(entry_url,
                                  callback=self.entry_parse,
                                  headers=self.headers)
+
         # 一覧ページに次のページがある場合、リクエストを投げる
         next_link = response.css(Css.to_next_page).extract_first()
         if next_link is None:
             return
-        yield scrapy.Request(next_link,
-                             callback=self.parse,
-                             headers=self.headers)
+        else:
+            yield scrapy.Request(next_link,
+                                 callback=self.parse,
+                                 headers=self.headers)
 
     def entry_parse(self, response):
         """
         詳細ページからitem情報を取得
         """
+        # DB登録済みitem検知後、
+        if self.end_flag:
+            raise CloseSpider('duplicated item is detected, end crawling')
         item = ComicImageItem()
         item['comic_key'] = self._get_commic_key(response)
         item['entry_url'] = self._get_entry_url(response)
@@ -113,6 +133,9 @@ class GetComicsSpider(scrapy.Spider):
         item['category'] = self._get_category(response)
         item['continuous_work'] = self._get_continuous_work(response)
         return item
+
+    def stop_crawling(self):
+        self.end_flag = True
 
     def _get_commic_key(self, response):
         """
