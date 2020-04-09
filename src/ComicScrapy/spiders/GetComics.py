@@ -60,6 +60,7 @@ class GetComicsSpider(scrapy.Spider):
         self.test_crawl = int(test_crawl)
         self.init_db = int(init_db)
         self.end_crawl = int(end_crawl)
+        # スクレイピング停止フラグ
         self.end_flag = False
 
         # 機能確認では指定のエントリーのみクロールする
@@ -95,14 +96,12 @@ class GetComicsSpider(scrapy.Spider):
                                  headers=self.headers)
         # --------------------------------------------
 
-        # DB登録済みitem検知後、
-        if self.end_flag:
-            raise CloseSpider('duplicated item is detected, end crawling')
+        # スクレイピング処理停止判定
+        self.close_spider_check()
 
         # 通常時処理 ----------------------------------
         # 詳細ページリクエストのループ
         for entry_url in response.css(Css.to_detail_page).extract():
-            print(entry_url)
             yield scrapy.Request(entry_url,
                                  callback=self.entry_parse,
                                  headers=self.headers)
@@ -120,9 +119,8 @@ class GetComicsSpider(scrapy.Spider):
         """
         詳細ページからitem情報を取得
         """
-        # DB登録済みitem検知後、
-        if self.end_flag:
-            raise CloseSpider('duplicated item is detected, end crawling')
+        # スクレイピング処理停止判定
+        self.close_spider_check()
         item = ComicImageItem()
         item['comic_key'] = self._get_commic_key(response)
         item['entry_url'] = self._get_entry_url(response)
@@ -135,7 +133,18 @@ class GetComicsSpider(scrapy.Spider):
         return item
 
     def stop_crawling(self):
+        """
+        スクレイピング停止フラグをTrueにする
+        (spider側からraiseする必要があるため,フラグで分岐して停止処理をコールする)
+        """
         self.end_flag = True
+
+    def close_spider_check(self):
+        """
+        スクレイピング停止判定、停止処理
+        """
+        if self.end_flag:
+            raise CloseSpider('duplicated item is detected, end crawling')
 
     def _get_commic_key(self, response):
         """

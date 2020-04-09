@@ -22,7 +22,7 @@ class MongoPipeline(object):
     MongoDB登録用パイプライン
     """
     # 重複itemを許容する数
-    MAX_DUP = 5
+    MAX_DUP = 10
     # 重複itemカウント用変数
     duplicate_count = 0
 
