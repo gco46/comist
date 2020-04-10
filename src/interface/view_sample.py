@@ -1,4 +1,5 @@
 import wx
+from pathlib import Path
 
 # 同windowに再描画するサンプル
 
@@ -16,7 +17,7 @@ class mainFrame(wx.Frame):
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         self.SetSizer(self.sizer)
 
-        self.set_screen(Panel_1)
+        self.set_screen(Panel_2)
 
     def set_screen(self, panel):
         """
@@ -32,6 +33,10 @@ class mainFrame(wx.Frame):
 
 
 class Panel_1(wx.Panel):
+    """
+    エントリ一覧の画面サンプル
+    """
+
     def __init__(self, parent):
         super().__init__(parent, wx.ID_ANY)
         self.parent = parent
@@ -104,28 +109,84 @@ class Panel_1(wx.Panel):
 
 
 class Panel_2(wx.Panel):
+    """
+    エントリー画面のサンプル
+    """
+
     def __init__(self, parent):
         super().__init__(parent, wx.ID_ANY)
         self.parent = parent
+        self.parent.Maximize()
 
         title_text = wx.StaticText(
-            self, wx.ID_ANY, '遷移後画面', style=wx.TE_CENTER)
+            self, wx.ID_ANY, 'Entry', style=wx.TE_CENTER)
         font_Title = wx.Font(24, wx.FONTFAMILY_DEFAULT,
                              wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL)
         title_text.SetFont(font_Title)
 
-        start_button = wx.Button(self, wx.ID_ANY, 'スタートに戻る')
-        start_button.Bind(wx.EVT_BUTTON, self.click_start_button)
+        # ページ送りボタン
+        next_page = wx.Button(self, wx.ID_ANY, "=>")
+        prev_page = wx.Button(self, wx.ID_ANY, "<=")
+        next_page.Bind(wx.EVT_BUTTON, self.draw_next_page)
+        prev_page.Bind(wx.EVT_BUTTON, self.draw_prev_page)
 
-        layout = wx.BoxSizer(wx.VERTICAL)
+        # DBからの取得した画像パスの模擬
+        entry_path = Path("../../data/Comics/jingai-kemono/175960/")
+        self.image_list = list(entry_path.glob("*.jpg"))
+        self.comic_idx = 0
+        self.idx_max = len(self.image_list) - 1
+        self.idx_min = 0
 
-        layout.Add(title_text, flag=wx.ALIGN_CENTER)
-        layout.Add(start_button, flag=wx.ALIGN_CENTER)
+        # 描画のためにBitmapオブジェクトに変換する必要あり
+        image = wx.Image(str(self.image_list[0]))
+        bitmap = image.ConvertToBitmap()
+        comic_img = wx.StaticBitmap(
+            self, wx.ID_ANY, bitmap, size=bitmap.GetSize())
 
-        self.SetSizer(layout)
+        # 左側に操作パネル、右側に画像を配置
+        # 要調整
+        self.layout = wx.BoxSizer(wx.HORIZONTAL)
+        left_layout = wx.BoxSizer(wx.VERTICAL)
+        left_layout.Add(title_text, flag=wx.ALIGN_CENTER)
+        button_layout = wx.BoxSizer(wx.HORIZONTAL)
+        button_layout.Add(prev_page, flag=wx.ALL, border=10)
+        button_layout.Add(next_page, flag=wx.ALL, border=10)
+        left_layout.Add(button_layout, flag=wx.ALIGN_CENTER)
 
-    def click_start_button(self, event):
-        self.parent.set_screen(Panel_1)
+        self.layout.Add(left_layout, proportion=1, flag=wx.ALIGN_LEFT)
+        self.layout.Add(comic_img, proportion=1, flag=wx.ALIGN_RIGHT)
+
+        self.SetSizer(self.layout)
+
+    def draw_next_page(self, event):
+        """
+        ページ送り試作
+        """
+        if self.comic_idx >= self.idx_max:
+            return
+        self.comic_idx += 1
+        window_list = self.layout.GetChildren()
+        comic_window = window_list[1].GetWindow()
+        image = wx.Image(str(self.image_list[self.comic_idx]))
+        bitmap = image.ConvertToBitmap()
+        comic_window.SetBitmap(bitmap)
+        # 再描画時に画像がずれるので、Layout()をコール
+        self.Layout()
+
+    def draw_prev_page(self, event):
+        """
+        ページ戻し試作
+        """
+        if self.comic_idx <= self.idx_min:
+            return
+        self.comic_idx -= 1
+        window_list = self.layout.GetChildren()
+        comic_window = window_list[1].GetWindow()
+        image = wx.Image(str(self.image_list[self.comic_idx]))
+        bitmap = image.ConvertToBitmap()
+        comic_window.SetBitmap(bitmap)
+        # 再描画時に画像がずれるので、Layout()をコール
+        self.Layout()
 
 
 if __name__ == '__main__':
