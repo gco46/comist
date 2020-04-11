@@ -1,4 +1,5 @@
 import wx
+from pymongo import MongoClient
 
 
 class MyFrame(wx.Frame):
@@ -29,25 +30,28 @@ class MyFrame(wx.Frame):
 
 
 class ViewFrame(wx.Frame):
+    """
+    Viewモード選択後画面
+    """
+
     def __init__(self, parent):
-        wx.Frame.__init__(self, parent, -1, 'view frame')
+        wx.Frame.__init__(self, parent, wx.ID_ANY, 'view frame')
+        # 画面を最大化
+        self.Maximize()
+        self.open_DB()
+        panel = wx.Panel(self, wx.ID_ANY)
         # Frameは一つ以上のPanelを含む
         # Panelの第一引数には親となるFrameを指定する
-        panel = wx.Panel(self, -1)
+        self.entry_panel = EntryListPanel(self, wx.ID_ANY)
+        self.search_panel = SearchPanel(self, wx.ID_ANY)
+        self.collection_panel = CollectionPanel(self, wx.ID_ANY)
 
-        text1 = wx.StaticText(panel, -1, "category1")
-        text2 = wx.StaticText(panel, -1, "category2")
-        self.result_text = wx.StaticText(panel, -1, "clicked text is...")
+        self.layout = wx.BoxSizer(wx.VERTICAL)
+        self.layout.Add(self.collection_panel, flag=wx.EXPAND)
+        self.layout.Add(self.search_panel, flag=wx.EXPAND)
+        self.layout.Add(self.entry_panel, flag=wx.EXPAND)
 
-        text1.Bind(wx.EVT_LEFT_DOWN, self.click)
-        text2.Bind(wx.EVT_LEFT_DOWN, self.click)
-
-        v_layout = wx.BoxSizer(wx.VERTICAL)
-        v_layout.Add(text1, flag=wx.TOP, border=10)
-        v_layout.Add(text2, flag=wx.TOP, border=10)
-        v_layout.Add(self.result_text, flag=wx.TOP, border=10)
-
-        panel.SetSizer(v_layout)
+        panel.SetSizer(self.layout)
         self.Show(True)
 
     def click(self, event):
@@ -55,6 +59,52 @@ class ViewFrame(wx.Frame):
         print(click)
         click_text = click.GetLabel()
         self.result_text.SetLabel(click_text)
+
+    def open_DB(self):
+        """
+        ローカルMongoDBに接続し、ScrapedDataを開く
+        """
+        self.client = MongoClient('localhost', 27017)
+        self.db = self.client['ScrapedData']
+
+    def select_collection(self, col):
+        """
+        DBのコレクションを選択
+        """
+        self.collection = self.db[col]
+
+
+class EntryListPanel(wx.Panel):
+    """
+    ViewFrame内
+    エントリ一覧を表示するパネル(ウィンドウ右に配置)
+    """
+
+    def __init__(self, parent, id):
+        super().__init__(parent, id)
+        self.parent = parent
+
+
+class SearchPanel(wx.Panel):
+    """
+    ViewFrame内
+    エントリー一覧を表示するパネル(ウィンドウ中央に配置)
+    """
+
+    def __init__(self, parent, id):
+        super().__init__(parent, id)
+        self.parent = parent
+
+
+class CollectionPanel(wx.Panel):
+    """
+    ViewFrame内
+    コレクション一覧を表示するパネル(ウィンドウ左に配置)
+    """
+
+    def __init__(self, parent, id):
+        super().__init__(parent, id)
+        self.parent = parent
 
 
 if __name__ == "__main__":
