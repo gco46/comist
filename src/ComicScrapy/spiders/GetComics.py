@@ -112,6 +112,8 @@ class GetComicsSpider(scrapy.Spider):
         item['tags'] = self._get_tags(response)
         item['category'] = self._get_category(response)
         item['continuous_work'] = self._get_continuous_work(response)
+        # 初期レートに'unrated'を登録する
+        itme['rete'] = 'unrated'
         return item
 
     def _get_commic_key(self, response):
