@@ -38,20 +38,23 @@ class ViewFrame(wx.Frame):
         wx.Frame.__init__(self, parent, wx.ID_ANY, 'view frame')
         # 画面を最大化
         self.Maximize()
-        self.open_DB()
-        panel = wx.Panel(self, wx.ID_ANY)
+        # self.open_DB()
         # Frameは一つ以上のPanelを含む
         # Panelの第一引数には親となるFrameを指定する
         self.entry_panel = EntryListPanel(self, wx.ID_ANY)
         self.search_panel = SearchPanel(self, wx.ID_ANY)
         self.collection_panel = CollectionPanel(self, wx.ID_ANY)
 
-        self.layout = wx.BoxSizer(wx.VERTICAL)
-        self.layout.Add(self.collection_panel, flag=wx.EXPAND)
-        self.layout.Add(self.search_panel, flag=wx.EXPAND)
-        self.layout.Add(self.entry_panel, flag=wx.EXPAND)
+        self.layout = wx.BoxSizer(wx.HORIZONTAL)
+        self.layout.Add(self.collection_panel, 2,
+                        flag=wx.EXPAND | wx.ALL, border=5)
+        self.layout.Add(self.search_panel, 2,
+                        flag=wx.EXPAND | wx.ALL, border=5)
+        self.layout.Add(self.entry_panel, 3,
+                        flag=wx.EXPAND | wx.ALL, border=5)
 
-        panel.SetSizer(self.layout)
+        self.SetSizer(self.layout)
+        self.Centre()
         self.Show(True)
 
     def click(self, event):
@@ -81,8 +84,22 @@ class EntryListPanel(wx.Panel):
     """
 
     def __init__(self, parent, id):
-        super().__init__(parent, id)
+        super().__init__(parent, id, style=wx.BORDER_SUNKEN)
         self.parent = parent
+        self.SetBackgroundColour("red")
+
+        title_text = wx.StaticText(
+            self, wx.ID_ANY, 'Entries', style=wx.TE_CENTER
+        )
+        font_Title = wx.Font(
+            24, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL,
+            wx.FONTWEIGHT_NORMAL
+        )
+        title_text.SetFont(font_Title)
+        self.layout = wx.BoxSizer(wx.VERTICAL)
+        self.layout.Add(title_text, flag=wx.ALIGN_CENTER)
+
+        self.SetSizer(self.layout)
 
 
 class SearchPanel(wx.Panel):
@@ -92,8 +109,22 @@ class SearchPanel(wx.Panel):
     """
 
     def __init__(self, parent, id):
-        super().__init__(parent, id)
+        super().__init__(parent, id, style=wx.BORDER_SUNKEN)
         self.parent = parent
+        self.SetBackgroundColour("blue")
+
+        title_text = wx.StaticText(
+            self, wx.ID_ANY, 'Search', style=wx.TE_CENTER
+        )
+        font_Title = wx.Font(
+            24, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL,
+            wx.FONTWEIGHT_NORMAL
+        )
+        title_text.SetFont(font_Title)
+        self.layout = wx.BoxSizer(wx.VERTICAL)
+        self.layout.Add(title_text, flag=wx.ALIGN_CENTER)
+
+        self.SetSizer(self.layout)
 
 
 class CollectionPanel(wx.Panel):
@@ -103,8 +134,22 @@ class CollectionPanel(wx.Panel):
     """
 
     def __init__(self, parent, id):
-        super().__init__(parent, id)
+        super().__init__(parent, id, style=wx.BORDER_SUNKEN)
         self.parent = parent
+        self.SetBackgroundColour("green")
+
+        title_text = wx.StaticText(
+            self, wx.ID_ANY, 'Collections', style=wx.TE_CENTER
+        )
+        font_Title = wx.Font(
+            24, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL,
+            wx.FONTWEIGHT_NORMAL
+        )
+        title_text.SetFont(font_Title)
+        self.layout = wx.BoxSizer(wx.VERTICAL)
+        self.layout.Add(title_text, flag=wx.ALIGN_CENTER)
+
+        self.SetSizer(self.layout)
 
 
 if __name__ == "__main__":
