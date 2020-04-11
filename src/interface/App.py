@@ -97,7 +97,6 @@ class EntryListPanel(wx.Panel):
 
     def __init__(self, parent, id):
         super().__init__(parent, id, style=wx.BORDER_SUNKEN)
-        self.parent = parent
         self.set_panel_title('Entries')
 
         self.layout = wx.BoxSizer(wx.VERTICAL)
@@ -138,39 +137,28 @@ class SearchPanel(wx.Panel):
             "netorare-netori",
             "ol-sister",
             "onesyota",
-            "rape"
+            "rape",
             "rezu-yuri"
         ]
     }
 
     def __init__(self, parent, id):
         super().__init__(parent, id, style=wx.BORDER_SUNKEN)
-        self.parent = parent
 
         self.set_panel_title('Search')
-        self.rate_layout = wx.BoxSizer(wx.HORIZONTAL)
-        rate_text = wx.StaticText(self, wx.ID_ANY, 'Rate')
-        font = wx.Font(
+        # 共通使用するフォント
+        self.font = wx.Font(
             18, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL,
             wx.FONTWEIGHT_NORMAL
         )
-        rate_text.SetFont(font)
-        elements = ['unrated', '1', '2', '3', '4', '5']
-        rate_cmbbox = wx.ComboBox(self, wx.ID_ANY, 'choose',
-                                  choices=elements, style=wx.CB_READONLY)
-        operators = ['==', '>=', '<=']
-        operator_cmbbox = wx.ComboBox(self, wx.ID_ANY, 'choose',
-                                      choices=operators, style=wx.CB_READONLY)
-        self.rate_layout.Add(rate_text, flag=wx.RIGHT, border=30)
-        self.rate_layout.Add(operator_cmbbox, flag=wx.RIGHT, border=5)
-        self.rate_layout.Add(rate_cmbbox, flag=wx.RIGHT, border=5)
+        # レートを選択する為のlayout作成
+        self.set_rate_cmbbtn()
 
-        selected = self.parent.collection_panel.get_selected_col()
-        categories = self.category_dict[selected]
-        self.category_rdbox = wx.RadioBox(
-            self, wx.ID_ANY, 'categories', choices=categories,
-            style=wx.RA_VERTICAL
-        )
+        # カテゴリを選択するlayout作成
+        self.set_categories_rdbtn()
+
+        # 検索ボタン
+        self.search_bottun = wx.Button(self, wx.ID_ANY, 'SEARCH')
 
         self.layout = wx.BoxSizer(wx.VERTICAL)
         self.layout.Add(self.title_text, flag=wx.ALIGN_CENTER)
@@ -178,6 +166,8 @@ class SearchPanel(wx.Panel):
                         flag=wx.ALIGN_CENTER | wx.TOP, border=15)
         self.layout.Add(self.category_rdbox,
                         flag=wx.ALIGN_CENTER | wx.TOP, border=15)
+        self.layout.Add(self.search_bottun,
+                        flag=wx.ALIGN_RIGHT)
 
         self.SetSizer(self.layout)
 
@@ -194,6 +184,42 @@ class SearchPanel(wx.Panel):
         )
         self.title_text.SetFont(font_Title)
 
+    def set_rate_cmbbtn(self):
+        """
+        レート検索用のコンボボックスを設定
+        """
+        self.rate_layout = wx.BoxSizer(wx.HORIZONTAL)
+        # テキスト
+        rate_text = wx.StaticText(self, wx.ID_ANY, 'Rate')
+        rate_text.SetFont(self.font)
+        # レート選択コンボボックス
+        elements = ['unrated', '1', '2', '3', '4', '5']
+        rate_cmbbox = wx.ComboBox(self, wx.ID_ANY, 'choose',
+                                  choices=elements, style=wx.CB_READONLY)
+        # 比較演算子選択コンボボックス
+        operators = ['', '==', '>=', '<=']
+        operator_cmbbox = wx.ComboBox(self, wx.ID_ANY, 'choose',
+                                      choices=operators, style=wx.CB_READONLY)
+
+        # TODO: 'unrated'選択時に比較演算子コンボボックスを無効にする
+
+        self.rate_layout.Add(rate_text, flag=wx.RIGHT, border=30)
+        self.rate_layout.Add(operator_cmbbox, flag=wx.RIGHT, border=5)
+        self.rate_layout.Add(rate_cmbbox, flag=wx.RIGHT, border=5)
+
+    def set_categories_rdbtn(self):
+        """
+        カテゴリ選択のラジオボタンを設定
+        """
+        # CollectionPanelで設定したコレクションからカテゴリを特定
+        selected = self.GetParent().collection_panel.get_selected_col()
+        categories = self.category_dict[selected]
+        self.category_rdbox = wx.RadioBox(
+            self, wx.ID_ANY, 'categories', choices=categories,
+            style=wx.RA_VERTICAL
+        )
+        self.category_rdbox.SetFont(self.font)
+
 
 class CollectionPanel(wx.Panel):
     """
@@ -203,7 +229,6 @@ class CollectionPanel(wx.Panel):
 
     def __init__(self, parent, id):
         super().__init__(parent, id, style=wx.BORDER_SUNKEN)
-        self.parent = parent
 
         self.set_panel_title('Collections')
         self.set_radio_buttons()
@@ -211,8 +236,6 @@ class CollectionPanel(wx.Panel):
         self.layout = wx.BoxSizer(wx.VERTICAL)
         self.layout.Add(self.title_text, flag=wx.ALIGN_CENTER)
         self.layout.Add(self.radio_box, flag=wx.ALIGN_CENTER)
-        # for button in self.rad_list:
-        #     self.layout.Add(button, flag=wx.ALIGN_CENTER | wx.TOP, border=10)
 
         self.SetSizer(self.layout)
 
@@ -233,21 +256,20 @@ class CollectionPanel(wx.Panel):
         """
         DB内のコレクション数だけラジオボタン追加
         """
-        # self.rad_list = []
         font = wx.Font(
             18, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL,
             wx.FONTWEIGHT_NORMAL
         )
         self.radio_box = wx.RadioBox(
-            self, wx.ID_ANY, '', choices=self.parent.col_list, style=wx.RA_VERTICAL
+            self, wx.ID_ANY, '', choices=self.GetParent().col_list,
+            style=wx.RA_VERTICAL
         )
         self.radio_box.SetFont(font)
-        # for col_name in self.parent.col_list:
-        #     rad_button = wx.RadioButton(self, wx.ID_ANY, col_name)
-        #     rad_button.SetFont(font)
-        #     self.rad_list.append(rad_button)
 
     def get_selected_col(self):
+        """
+        ラジオボタンで選択されているコレクションを返す
+        """
         return self.radio_box.GetStringSelection()
 
 
