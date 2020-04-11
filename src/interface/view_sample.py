@@ -17,7 +17,7 @@ class mainFrame(wx.Frame):
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         self.SetSizer(self.sizer)
 
-        self.set_screen(Panel_2)
+        self.set_screen(Panel_1)
 
     def set_screen(self, panel):
         """
@@ -54,7 +54,7 @@ class Panel_1(wx.Panel):
         self.idx_min = 0
 
         self.title_text = wx.StaticText(
-            self, wx.ID_ANY, 'タイトル', style=wx.TE_CENTER)
+            self, wx.ID_ANY, 'Results', style=wx.TE_CENTER)
         self.font_Title = wx.Font(24, wx.FONTFAMILY_DEFAULT,
                                   wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL)
         self.title_text.SetFont(self.font_Title)
