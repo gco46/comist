@@ -82,7 +82,6 @@ class ViewFrame(wx.Frame):
         """
         ViewFrameが閉じられた時にDBクローズ
         """
-        print("close")
         self.client.close()
         self.Destroy()
 
@@ -106,6 +105,7 @@ class EntryListPanel(wx.Panel):
         self.set_panel_title('Entries')
         self.init_search_layout()
         self.init_thumbnails()
+        self.set_paging_button()
 
         self.layout = wx.BoxSizer(wx.VERTICAL)
         self.layout.Add(self.title_text, flag=wx.ALIGN_CENTER)
@@ -115,7 +115,7 @@ class EntryListPanel(wx.Panel):
             border=20
         )
         self.layout.Add(self.thumbnails, flag=wx.ALIGN_CENTER)
-
+        self.layout.Add(self.btn_layout, flag=wx.ALIGN_CENTER)
         self.SetSizer(self.layout)
 
     def set_panel_title(self, title):
@@ -145,7 +145,7 @@ class EntryListPanel(wx.Panel):
         )
         self.operator.SetFont(font)
         self.selected_rate = wx.StaticText(
-            self, wx.ID_ANY, "unrated", style=wx.TE_CENTER
+            self, wx.ID_ANY, "", style=wx.TE_CENTER
         )
         self.selected_rate.SetFont(font)
 
@@ -164,7 +164,7 @@ class EntryListPanel(wx.Panel):
         )
         category_text.SetFont(font)
         self.selected_category = wx.StaticText(
-            self, wx.ID_ANY, "jyukujo-hitozuma", style=wx.TE_CENTER
+            self, wx.ID_ANY, "", style=wx.TE_CENTER
         )
         self.selected_category.SetFont(font)
         self.category_layout = wx.BoxSizer(wx.HORIZONTAL)
@@ -218,6 +218,24 @@ class EntryListPanel(wx.Panel):
                 border=10)
             img_title.Add(title, flag=wx.ALIGN_CENTER | wx.BOTTOM, border=10)
             self.thumbnails.Add(img_title)
+
+    def set_paging_button(self):
+        next_button = wx.Button(self, wx.ID_ANY, '次へ')
+        # next_button.Bind(wx.EVT_BUTTON, self.click_next_button)
+        previous_button = wx.Button(self, wx.ID_ANY, '前へ')
+        # previous_button.Bind(wx.EVT_BUTTON, self.click_previous_button)
+
+        self.btn_layout = wx.BoxSizer(wx.HORIZONTAL)
+        self.btn_layout.Add(
+            previous_button,
+            flag=wx.ALIGN_CENTER | wx.RIGHT | wx.LEFT,
+            border=10
+        )
+        self.btn_layout.Add(
+            next_button,
+            flag=wx.ALIGN_CENTER | wx.RIGHT | wx.LEFT,
+            border=10
+        )
 
 
 class SearchPanel(wx.Panel):
