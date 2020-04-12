@@ -137,7 +137,7 @@ class GetComicsSpider(scrapy.Spider):
         item['category'] = self._get_category(response)
         item['continuous_work'] = self._get_continuous_work(response)
         # 初期レートに'unrated'を登録する
-        itme['rate'] = 'unrated'
+        item['rate'] = 'unrated'
         return item
 
     def stop_crawling(self):
