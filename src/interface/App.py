@@ -1,5 +1,6 @@
 import wx
 from pymongo import MongoClient
+from pathlib import Path
 
 
 class MyFrame(wx.Frame):
@@ -25,7 +26,6 @@ class MyFrame(wx.Frame):
         print("scraping button")
 
     def OnClickViewComics(self, event):
-        print("view comics button")
         view_frame = ViewFrame(self)
 
 
@@ -82,6 +82,7 @@ class ViewFrame(wx.Frame):
         """
         ViewFrameが閉じられた時にDBクローズ
         """
+        print("close")
         self.client.close()
         self.Destroy()
 
@@ -95,12 +96,25 @@ class EntryListPanel(wx.Panel):
     エントリ一覧を表示するパネル(ウィンドウ右に配置)
     """
 
+    grid_row = 3
+    grid_col = 4
+    n_item_per_page = grid_row * grid_col
+    no_image_path = '../../data/Comics/no_image.png'
+
     def __init__(self, parent, id):
         super().__init__(parent, id, style=wx.BORDER_SUNKEN)
         self.set_panel_title('Entries')
+        self.init_search_layout()
+        self.init_thumbnails()
 
         self.layout = wx.BoxSizer(wx.VERTICAL)
         self.layout.Add(self.title_text, flag=wx.ALIGN_CENTER)
+        self.layout.Add(
+            self.search_layout,
+            flag=wx.ALIGN_CENTER | wx.BOTTOM,
+            border=20
+        )
+        self.layout.Add(self.thumbnails, flag=wx.ALIGN_CENTER)
 
         self.SetSizer(self.layout)
 
@@ -116,6 +130,94 @@ class EntryListPanel(wx.Panel):
             wx.FONTWEIGHT_NORMAL
         )
         self.title_text.SetFont(font_Title)
+
+    def init_rate_layout(self):
+        font = wx.Font(
+            18, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL,
+            wx.FONTWEIGHT_NORMAL
+        )
+        rate_text = wx.StaticText(
+            self, wx.ID_ANY, "Rate : ", style=wx.TE_CENTER
+        )
+        rate_text.SetFont(font)
+        self.operator = wx.StaticText(
+            self, wx.ID_ANY, "", style=wx.TE_CENTER
+        )
+        self.operator.SetFont(font)
+        self.selected_rate = wx.StaticText(
+            self, wx.ID_ANY, "unrated", style=wx.TE_CENTER
+        )
+        self.selected_rate.SetFont(font)
+
+        self.rate_layout = wx.BoxSizer(wx.HORIZONTAL)
+        self.rate_layout.Add(rate_text, flag=wx.ALIGN_CENTER)
+        self.rate_layout.Add(self.operator, flag=wx.ALIGN_CENTER)
+        self.rate_layout.Add(self.selected_rate, flag=wx.ALIGN_CENTER)
+
+    def init_category_layout(self):
+        font = wx.Font(
+            18, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL,
+            wx.FONTWEIGHT_NORMAL
+        )
+        category_text = wx.StaticText(
+            self, wx.ID_ANY, "Category : ", style=wx.TE_CENTER
+        )
+        category_text.SetFont(font)
+        self.selected_category = wx.StaticText(
+            self, wx.ID_ANY, "jyukujo-hitozuma", style=wx.TE_CENTER
+        )
+        self.selected_category.SetFont(font)
+        self.category_layout = wx.BoxSizer(wx.HORIZONTAL)
+        self.category_layout.Add(category_text, flag=wx.ALIGN_CENTER)
+        self.category_layout.Add(self.selected_category, flag=wx.ALIGN_CENTER)
+
+    def init_search_layout(self):
+        """
+        panel上部の検索クエリ文字列を初期化
+        """
+        self.init_rate_layout()
+        self.init_category_layout()
+        self.search_layout = wx.BoxSizer(wx.HORIZONTAL)
+        self.search_layout.Add(
+            self.rate_layout,
+            flag=wx.ALIGN_CENTER | wx.RIGHT | wx.LEFT,
+            border=30
+        )
+        self.search_layout.Add(
+            self.category_layout,
+            flag=wx.ALIGN_CENTER | wx.RIGHT | wx.LEFT,
+            border=30
+        )
+
+    def init_thumbnails(self):
+        """
+        サムネイル用GridSizerを初期化
+        """
+        self.thumbnails = wx.GridSizer(
+            rows=self.grid_row, cols=self.grid_col, gap=(0, 0))
+        img_path = Path(self.no_image_path)
+        font = wx.Font(
+            16, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL,
+            wx.FONTWEIGHT_NORMAL
+        )
+        for i in range(self.n_item_per_page):
+            img_title = wx.BoxSizer(wx.VERTICAL)
+            title = wx.StaticText(
+                self, wx.ID_ANY, 'title' + str(i), style=wx.TE_CENTER
+            )
+            title.SetFont(font)
+            img = wx.Image(str(img_path))
+            img = img.Scale(180, 260, wx.IMAGE_QUALITY_HIGH)
+            bitmap = img.ConvertToBitmap()
+            comic_img = wx.StaticBitmap(
+                self, wx.ID_ANY, bitmap, size=bitmap.GetSize()
+            )
+            img_title.Add(
+                comic_img,
+                flag=wx.ALIGN_CENTER | wx.RIGHT | wx.LEFT,
+                border=10)
+            img_title.Add(title, flag=wx.ALIGN_CENTER | wx.BOTTOM, border=10)
+            self.thumbnails.Add(img_title)
 
 
 class SearchPanel(wx.Panel):
