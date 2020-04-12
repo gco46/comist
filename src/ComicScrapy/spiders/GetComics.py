@@ -16,7 +16,7 @@ class GetComicsSpider(scrapy.Spider):
     name = 'GetComics'
     allowed_domains = ['eromanga-yoru.com']
     start_urls = []
-    base_url = "https://eromanga-yoru.com/"
+    base_url = "https://eromanga-yoru.com/front"
     category_list = [
         "eromanga-night",
         "gyaru",
@@ -30,7 +30,7 @@ class GetComicsSpider(scrapy.Spider):
         "netorare-netori",
         "ol-sister",
         "onesyota",
-        "rape"
+        "rape",
         "rezu-yuri",
         "front"                 # 最新のエントリから取得
     ]
@@ -79,10 +79,15 @@ class GetComicsSpider(scrapy.Spider):
             category = []
         # category 引数チェック
         for c in category:
-            if c not in self.category_list:
-                raise ValueError(c + " is not in category list.")
-            self.start_urls.append(
-                urllib.parse.urljoin(self.base_url, c.strip()))
+            cat = c.strip()
+            if cat not in self.category_list:
+                raise ValueError(cat + " is not in category list.")
+            if cat == "front":
+                self.start_urls.append(self.base_url)
+            else:
+                self.start_urls.append(
+                    urllib.parse.urljoin(self.base_url, "category/" + cat)
+                )
 
     def parse(self, response):
         """
@@ -121,6 +126,7 @@ class GetComicsSpider(scrapy.Spider):
         """
         # スクレイピング処理停止判定
         self.close_spider_check()
+        # TODO: 空ページの例外処理追加
         item = ComicImageItem()
         item['comic_key'] = self._get_commic_key(response)
         item['entry_url'] = self._get_entry_url(response)
@@ -173,7 +179,13 @@ class GetComicsSpider(scrapy.Spider):
         author_title = re.search(Ptn.author_title, caption).group(0)
         # 【(作者):(タイトル)】の文字列から作者とタイトルを抽出
         # 【】を除く文字列を抜き出し、:(コロン)を区切り文字として抽出
-        author_title = author_title[1:-1].split(":")
+        if author_title.count(":") == 1:
+            author_title = author_title[1:-1].split(":")
+        else:
+            # 作品名または作者名にコロンが含まれている場合はどちらか判断できないので、
+            # 作品名にコロンが含まれているものとしてタイトル、作者を取得する
+            tmp = author_title[1:-1].split(":")
+            author_title = [tmp[0], tmp[1] + ":" + tmp[2]]
         return author_title
 
     def _get_image_urls(self, response):
