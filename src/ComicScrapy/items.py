@@ -18,3 +18,4 @@ class ComicImageItem(scrapy.Item):
     num_images = scrapy.Field()         # 漫画のページ数
     tags = scrapy.Field()               # 漫画が持つtag情報
     category = scrapy.Field()           # カテゴリ(日本語)
+    rate = scrapy.Field()               # レート
