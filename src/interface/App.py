@@ -237,6 +237,10 @@ class EntryListPanel(wx.Panel):
             border=10
         )
 
+    def update_search_result(self):
+        # TODO: 検索結果を取得してサムネイル情報を更新
+        pass
+
 
 class SearchPanel(wx.Panel):
     """
@@ -244,22 +248,24 @@ class SearchPanel(wx.Panel):
     エントリー一覧を表示するパネル(ウィンドウ中央に配置)
     """
     category_dict = {
-        "eromanga_night": [
-            "eromanga-night",
-            "gyaru",
-            "hinnyu",
-            "jingai-kemono",
-            "jk-jc",
-            "jyukujyo-hitozuma",
-            "kinshinsoukan",
-            "kosupure",
-            "kyonyu-binyu",
-            "netorare-netori",
-            "ol-sister",
-            "onesyota",
-            "rape",
-            "rezu-yuri"
-        ]
+        "eromanga_night": {
+            "eromanga-night": "エロ漫画の夜",
+            "gyaru": "ギャル",
+            "hinnyu": "貧乳",
+            "jingai-kemono": "人外・獣",
+            "jk-jc": "JK・JC",
+            "jyukujyo-hitozuma": "熟女・人妻",
+            "kinshinsoukan": "近親相姦",
+            "kosupure": "コスプレ",
+            "kyonyu-binyu": "巨乳・美乳",
+            "netorare-netori": "寝取られ・寝取り",
+            "ol-sister": "OL・お姉さん",
+            "onesyota": "おねショタ",
+            "rape": "レイプ",
+            "rezu-yuri": "レズ・百合",
+            "ALL": "全て"
+        }
+
     }
 
     def __init__(self, parent, id):
@@ -278,7 +284,8 @@ class SearchPanel(wx.Panel):
         self.set_categories_rdbtn()
 
         # 検索ボタン
-        self.search_bottun = wx.Button(self, wx.ID_ANY, 'SEARCH')
+        self.search_button = wx.Button(self, wx.ID_ANY, 'SEARCH')
+        self.search_button.Bind(wx.EVT_BUTTON, self.click_search)
 
         self.layout = wx.BoxSizer(wx.VERTICAL)
         self.layout.Add(self.title_text, flag=wx.ALIGN_CENTER)
@@ -286,7 +293,7 @@ class SearchPanel(wx.Panel):
                         flag=wx.ALIGN_CENTER | wx.TOP, border=15)
         self.layout.Add(self.category_rdbox,
                         flag=wx.ALIGN_CENTER | wx.TOP, border=15)
-        self.layout.Add(self.search_bottun,
+        self.layout.Add(self.search_button,
                         flag=wx.ALIGN_RIGHT)
 
         self.SetSizer(self.layout)
@@ -314,18 +321,19 @@ class SearchPanel(wx.Panel):
         rate_text.SetFont(self.font)
         # レート選択コンボボックス
         elements = ['unrated', '1', '2', '3', '4', '5']
-        rate_cmbbox = wx.ComboBox(self, wx.ID_ANY, 'choose',
-                                  choices=elements, style=wx.CB_READONLY)
+        self.rate_cmbbox = wx.ComboBox(self, wx.ID_ANY, 'choose',
+                                       choices=elements, style=wx.CB_READONLY)
         # 比較演算子選択コンボボックス
         operators = ['', '==', '>=', '<=']
-        operator_cmbbox = wx.ComboBox(self, wx.ID_ANY, 'choose',
-                                      choices=operators, style=wx.CB_READONLY)
+        self.operator_cmbbox = wx.ComboBox(
+            self, wx.ID_ANY, 'choose', choices=operators, style=wx.CB_READONLY
+        )
 
         # TODO: 'unrated'選択時に比較演算子コンボボックスを無効にする
 
         self.rate_layout.Add(rate_text, flag=wx.RIGHT, border=30)
-        self.rate_layout.Add(operator_cmbbox, flag=wx.RIGHT, border=5)
-        self.rate_layout.Add(rate_cmbbox, flag=wx.RIGHT, border=5)
+        self.rate_layout.Add(self.operator_cmbbox, flag=wx.RIGHT, border=5)
+        self.rate_layout.Add(self.rate_cmbbox, flag=wx.RIGHT, border=5)
 
     def set_categories_rdbtn(self):
         """
@@ -333,12 +341,52 @@ class SearchPanel(wx.Panel):
         """
         # CollectionPanelで設定したコレクションからカテゴリを特定
         selected = self.GetParent().collection_panel.get_selected_col()
-        categories = self.category_dict[selected]
+        # カテゴリ一覧からキーのリスト取得
+        categories = self.category_dict[selected].keys()
+        categories = list(categories)
         self.category_rdbox = wx.RadioBox(
             self, wx.ID_ANY, 'categories', choices=categories,
             style=wx.RA_VERTICAL
         )
         self.category_rdbox.SetFont(self.font)
+
+    def click_search(self, event):
+        # TODO: コンボボックス、ラジオボタンの選択状態を取得
+        rate_q = self.rate_cmbbox.GetStringSelection()
+        operator_q = self.operator_cmbbox.GetStringSelection()
+        category_q = self.category_rdbox.GetStringSelection()
+        # TODO: 取得した選択状態からでクエリ作成、DB検索
+        query = self.make_query(rate_q, operator_q, category_q)
+        print(query)
+        search_result = self.DB_search(query)
+        print(search_result[0])
+        # TODO: 検索結果を自身のクラスに保存
+        # TODO: EntryListPanelのメソッドを呼び出して検索結果を渡す
+        pass
+
+    def make_query(self, rate, operator, category):
+        query = []
+        if category != "ALL":
+            selected = self.GetParent().collection_panel.get_selected_col()
+            c_dict = self.category_dict[selected]
+            query.append({"category": c_dict[category]})
+        if rate == "unrated":
+            query.append({'rate': rate})
+        else:
+            rate = int(rate)
+            if operator == ">=":
+                query.append({"rate": {"$gte": rate}})
+            elif operator == "<=":
+                query.append({"rate": {"$lte": rate}})
+            else:
+                query.append({"rate": rate})
+        return {"$and": query}
+
+    def DB_search(self, query):
+        selected = self.GetParent().collection_panel.get_selected_col()
+        col = self.GetParent().db[selected]
+        result = col.find(query)
+        return list(result)
 
 
 class CollectionPanel(wx.Panel):
