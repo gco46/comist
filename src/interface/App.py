@@ -98,7 +98,10 @@ class EntryListPanel(wx.Panel):
     grid_row = 3
     grid_col = 4
     n_item_per_page = grid_row * grid_col
-    no_image_path = '../../data/Comics/no_image.png'
+    image_path = Path('../../data/Comics')
+    no_image_path = image_path / 'no_image.png'
+    img_w = 180
+    img_h = 260
 
     def __init__(self, parent, id):
         super().__init__(parent, id, style=wx.BORDER_SUNKEN)
@@ -195,11 +198,13 @@ class EntryListPanel(wx.Panel):
         """
         self.thumbnails = wx.GridSizer(
             rows=self.grid_row, cols=self.grid_col, gap=(0, 0))
-        img_path = Path(self.no_image_path)
+        img_path = self.no_image_path
         font = wx.Font(
             16, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL,
             wx.FONTWEIGHT_NORMAL
         )
+        self.img_obj_list = []
+        self.title_obj_list = []
         for i in range(self.n_item_per_page):
             img_title = wx.BoxSizer(wx.VERTICAL)
             title = wx.StaticText(
@@ -207,17 +212,21 @@ class EntryListPanel(wx.Panel):
             )
             title.SetFont(font)
             img = wx.Image(str(img_path))
-            img = img.Scale(180, 260, wx.IMAGE_QUALITY_HIGH)
+            img = img.Scale(self.img_w, self.img_h, wx.IMAGE_QUALITY_HIGH)
             bitmap = img.ConvertToBitmap()
             comic_img = wx.StaticBitmap(
                 self, wx.ID_ANY, bitmap, size=bitmap.GetSize()
             )
             img_title.Add(
                 comic_img,
+                flag=wx.ALIGN_CENTER)
+            img_title.Add(title, flag=wx.ALIGN_LEFT | wx.BOTTOM, border=10)
+            self.thumbnails.Add(
+                img_title,
                 flag=wx.ALIGN_CENTER | wx.RIGHT | wx.LEFT,
                 border=10)
-            img_title.Add(title, flag=wx.ALIGN_CENTER | wx.BOTTOM, border=10)
-            self.thumbnails.Add(img_title)
+            self.img_obj_list.append(comic_img)
+            self.title_obj_list.append(title)
 
     def set_paging_button(self):
         next_button = wx.Button(self, wx.ID_ANY, '次へ')
@@ -237,9 +246,39 @@ class EntryListPanel(wx.Panel):
             border=10
         )
 
-    def update_search_result(self):
-        # TODO: 検索結果を取得してサムネイル情報を更新
-        pass
+    def update_entry_list(self, search_result):
+        """
+        検索結果からサムネイル情報を更新
+        """
+        # 検索結果をリスト化
+        # No imageで描画用に、エントリの端数は空文字を入れる
+        self.s_result = list(search_result)
+        tmp = -(len(self.s_result) // self.n_item_per_page) * \
+            self.n_item_per_page
+        self.s_result += [""] * (tmp - len(self.s_result))
+        for i in range(self.n_item_per_page):
+            # タイトル設定処理
+            title = self.s_result[i]["title"]
+            # 10文字以上のタイトルは省略
+            if len(title) > 9:
+                title = title[:8] + "..."
+            self.title_obj_list[i].SetLabel(title)
+
+            # サムネイル設定処理
+            comic_key = self.s_result[i]["comic_key"]
+            comic_path = self.image_path / comic_key
+            # jpgがなければpngで試す、それでもなければスキップ
+            img_pathes = list(comic_path.glob("*.jpg"))
+            if len(img_pathes) == 0:
+                img_pathes = list(comic_path.glob("*.png"))
+                if len(img_pathes) == 0:
+                    continue
+            # 先頭ページをサムネイル用画像に選択
+            tmp_img = wx.Image(str(img_pathes[0]))
+            tmp_img = tmp_img.Scale(
+                self.img_w, self.img_h, wx.IMAGE_QUALITY_HIGH)
+            thumbnail = tmp_img.ConvertToBitmap()
+            self.img_obj_list[i].SetBitmap(thumbnail)
 
 
 class SearchPanel(wx.Panel):
@@ -351,18 +390,21 @@ class SearchPanel(wx.Panel):
         self.category_rdbox.SetFont(self.font)
 
     def click_search(self, event):
-        # TODO: コンボボックス、ラジオボタンの選択状態を取得
+        # コンボボックス、ラジオボタンの選択状態を取得
         rate_q = self.rate_cmbbox.GetStringSelection()
         operator_q = self.operator_cmbbox.GetStringSelection()
         category_q = self.category_rdbox.GetStringSelection()
-        # TODO: 取得した選択状態からでクエリ作成、DB検索
+        # 取得した選択状態からでクエリ作成、DB検索
         query = self.make_query(rate_q, operator_q, category_q)
-        print(query)
+        # rateが選択されていない場合は終了
+        if query is None:
+            return
         search_result = self.DB_search(query)
-        print(search_result[0])
-        # TODO: 検索結果を自身のクラスに保存
+        # 検索結果が0件の場合は終了
+        if len(search_result) == 0:
+            return
         # TODO: EntryListPanelのメソッドを呼び出して検索結果を渡す
-        pass
+        self.GetParent().entry_panel.update_entry_list(search_result)
 
     def make_query(self, rate, operator, category):
         query = []
@@ -370,7 +412,9 @@ class SearchPanel(wx.Panel):
             selected = self.GetParent().collection_panel.get_selected_col()
             c_dict = self.category_dict[selected]
             query.append({"category": c_dict[category]})
-        if rate == "unrated":
+        if rate == "":
+            return
+        elif rate == "unrated":
             query.append({'rate': rate})
         else:
             rate = int(rate)
