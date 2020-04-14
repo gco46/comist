@@ -102,6 +102,7 @@ class EntryListPanel(wx.Panel):
     no_image_path = image_path / 'no_image.png'
     img_w = 180
     img_h = 260
+    hdlr = "self.click_comic_"
 
     def __init__(self, parent, id):
         super().__init__(parent, id, style=wx.BORDER_SUNKEN)
@@ -230,6 +231,9 @@ class EntryListPanel(wx.Panel):
                 border=10)
             self.img_obj_list.append(comic_img)
             self.title_obj_list.append(title)
+            # サムネイル、タイトルにハンドラを関連付け
+            comic_img.Bind(wx.EVT_LEFT_DOWN, eval(self.hdlr + str(i)))
+            title.Bind(wx.EVT_LEFT_DOWN, eval(self.hdlr + str(i)))
 
     def init_paging_button(self):
         """
@@ -322,6 +326,43 @@ class EntryListPanel(wx.Panel):
         self.p_numerator.SetLabel(str(self.e_list_idx + 1))
         # サムネイル、タイトル更新
         self.update_thumbnail_and_title(self.e_list_idx)
+
+    def click_comic_0(self, event):
+        # TODO: リストから選択された漫画を特定し、ComicViewFrameを開く
+        pass
+
+    def click_comic_1(self, event):
+        pass
+
+    def click_comic_2(self, event):
+        pass
+
+    def click_comic_3(self, event):
+        pass
+
+    def click_comic_4(self, event):
+        pass
+
+    def click_comic_5(self, event):
+        pass
+
+    def click_comic_6(self, event):
+        pass
+
+    def click_comic_7(self, event):
+        pass
+
+    def click_comic_8(self, event):
+        pass
+
+    def click_comic_9(self, event):
+        pass
+
+    def click_comic_10(self, event):
+        pass
+
+    def click_comic_11(self, event):
+        pass
 
     def update_entry_list(self, search_result):
         """
