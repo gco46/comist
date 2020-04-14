@@ -17,7 +17,7 @@ class mainFrame(wx.Frame):
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         self.SetSizer(self.sizer)
 
-        self.set_screen(Panel_1)
+        self.set_screen(Panel_2)
 
     def set_screen(self, panel):
         """
@@ -131,7 +131,7 @@ class Panel_2(wx.Panel):
         prev_page.Bind(wx.EVT_BUTTON, self.draw_prev_page)
 
         # DBからの取得した画像パスの模擬
-        entry_path = Path("../../data/Comics/jingai-kemono/175960/")
+        entry_path = Path("../../data/Comics/rezu-yuri/86205/")
         self.image_list = list(entry_path.glob("*.jpg"))
         self.comic_idx = 0
         self.idx_max = len(self.image_list) - 1
