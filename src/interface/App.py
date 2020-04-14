@@ -108,7 +108,7 @@ class EntryListPanel(wx.Panel):
         self.set_panel_title('Entries')
         self.init_search_layout()
         self.init_thumbnails()
-        self.set_paging_button()
+        self.init_paging_button()
 
         self.layout = wx.BoxSizer(wx.VERTICAL)
         self.layout.Add(self.title_text, flag=wx.ALIGN_CENTER)
@@ -228,23 +228,62 @@ class EntryListPanel(wx.Panel):
             self.img_obj_list.append(comic_img)
             self.title_obj_list.append(title)
 
-    def set_paging_button(self):
-        next_button = wx.Button(self, wx.ID_ANY, '次へ')
-        # next_button.Bind(wx.EVT_BUTTON, self.click_next_button)
-        previous_button = wx.Button(self, wx.ID_ANY, '前へ')
-        # previous_button.Bind(wx.EVT_BUTTON, self.click_previous_button)
+    def init_paging_button(self):
+        """
+        ページングボタンとページングに使用する変数を初期化
+        """
+        # エントリリストのページング用インデックスを初期化する
+        self.e_list_idx = 0
+        # 各ボタンを初期化、配置する
+        self.next_button = wx.Button(self, wx.ID_ANY, '次へ')
+        self.next_button.Bind(wx.EVT_BUTTON, self.click_next_button)
+        self.previous_button = wx.Button(self, wx.ID_ANY, '前へ')
+        self.previous_button.Bind(wx.EVT_BUTTON, self.click_previous_button)
+        # DB検索されるまでボタンは無効化する
+        self.next_button.Disable()
+        self.previous_button.Disable()
 
         self.btn_layout = wx.BoxSizer(wx.HORIZONTAL)
         self.btn_layout.Add(
-            previous_button,
+            self.previous_button,
             flag=wx.ALIGN_CENTER | wx.RIGHT | wx.LEFT,
             border=10
         )
         self.btn_layout.Add(
-            next_button,
+            self.next_button,
             flag=wx.ALIGN_CENTER | wx.RIGHT | wx.LEFT,
             border=10
         )
+
+    def set_query_text(self, rate_q, ope_q):
+        """
+        クエリのレート・比較演算子をパネルに反映
+        """
+        self.operator.SetLabel(ope_q)
+        self.selected_rate.SetLabel(rate_q)
+
+    def enable_entry_paging(self):
+        """
+        エントリリストのページングを有効化する
+        """
+        # ボタン有効化
+        self.next_button.Enable()
+        self.previous_button.Enable()
+        # インデックスを初期化
+        self.idx_max = len(self.s_result) // self.n_item_per_page - 1
+        self.idx_min = 0
+
+    def click_next_button(self, event):
+        if self.e_list_idx == self.idx_max:
+            return
+        self.e_list_idx += 1
+        self.update_thumbnail_and_title(self.e_list_idx)
+
+    def click_previous_button(self, event):
+        if self.e_list_idx == self.idx_min:
+            return
+        self.e_list_idx -= 1
+        self.update_thumbnail_and_title(self.e_list_idx)
 
     def update_entry_list(self, search_result):
         """
@@ -253,19 +292,36 @@ class EntryListPanel(wx.Panel):
         # 検索結果をリスト化
         # No imageで描画用に、エントリの端数は空文字を入れる
         self.s_result = list(search_result)
-        tmp = -(len(self.s_result) // self.n_item_per_page) * \
+        tmp = -(-len(self.s_result) // self.n_item_per_page) * \
             self.n_item_per_page
         self.s_result += [""] * (tmp - len(self.s_result))
+        # TODO: EntryPanel上部のRate, Categoryのテキストを更新
+        # エントリリストの0ページ目を描画
+        self.update_thumbnail_and_title(0)
+        # entry panelのページング処理を有効化
+        self.GetParent().entry_panel.enable_entry_paging()
+
+    def update_thumbnail_and_title(self, idx):
         for i in range(self.n_item_per_page):
             # タイトル設定処理
-            title = self.s_result[i]["title"]
+            try:
+                title = self.s_result[idx * self.n_item_per_page + i]["title"]
+            except TypeError:
+                # 端数のエントリはno image, titleにする
+                img = wx.Image(str(self.no_image_path))
+                img = img.Scale(self.img_w, self.img_h, wx.IMAGE_QUALITY_HIGH)
+                bitmap = img.ConvertToBitmap()
+                self.title_obj_list[i].SetLabel("title" + str(i))
+                self.img_obj_list[i].SetBitmap(bitmap)
+                continue
             # 10文字以上のタイトルは省略
             if len(title) > 9:
                 title = title[:8] + "..."
             self.title_obj_list[i].SetLabel(title)
 
             # サムネイル設定処理
-            comic_key = self.s_result[i]["comic_key"]
+            comic_key = self.s_result[idx *
+                                      self.n_item_per_page + i]["comic_key"]
             comic_path = self.image_path / comic_key
             # jpgがなければpngで試す、それでもなければスキップ
             img_pathes = list(comic_path.glob("*.jpg"))
@@ -286,6 +342,7 @@ class SearchPanel(wx.Panel):
     ViewFrame内
     エントリー一覧を表示するパネル(ウィンドウ中央に配置)
     """
+    # TODO: サーチパネルに表示するカテゴリを日本語化する
     category_dict = {
         "eromanga_night": {
             "eromanga-night": "エロ漫画の夜",
@@ -368,7 +425,7 @@ class SearchPanel(wx.Panel):
             self, wx.ID_ANY, 'choose', choices=operators, style=wx.CB_READONLY
         )
 
-        # TODO: 'unrated'選択時に比較演算子コンボボックスを無効にする
+        # TODO: 'unrated'選択時に比較演算子コンボボックスを無効にする(優先度低)
 
         self.rate_layout.Add(rate_text, flag=wx.RIGHT, border=30)
         self.rate_layout.Add(self.operator_cmbbox, flag=wx.RIGHT, border=5)
@@ -403,7 +460,7 @@ class SearchPanel(wx.Panel):
         # 検索結果が0件の場合は終了
         if len(search_result) == 0:
             return
-        # TODO: EntryListPanelのメソッドを呼び出して検索結果を渡す
+        # EntryListPanelのメソッドを呼び出して検索結果を渡す
         self.GetParent().entry_panel.update_entry_list(search_result)
 
     def make_query(self, rate, operator, category):
