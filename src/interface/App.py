@@ -109,6 +109,7 @@ class EntryListPanel(wx.Panel):
         self.init_search_layout()
         self.init_thumbnails()
         self.init_paging_button()
+        self.init_page_num()
 
         self.layout = wx.BoxSizer(wx.VERTICAL)
         self.layout.Add(self.title_text, flag=wx.ALIGN_CENTER)
@@ -119,6 +120,8 @@ class EntryListPanel(wx.Panel):
         )
         self.layout.Add(self.thumbnails, flag=wx.ALIGN_CENTER)
         self.layout.Add(self.btn_layout, flag=wx.ALIGN_CENTER)
+        self.layout.Add(self.n_page_layout,
+                        flag=wx.ALIGN_CENTER | wx.TOP, border=5)
         self.SetSizer(self.layout)
 
     def set_panel_title(self, title):
@@ -255,6 +258,32 @@ class EntryListPanel(wx.Panel):
             border=10
         )
 
+    def init_page_num(self):
+        """
+        エントリリストのページ数を初期化
+        """
+        self.n_page_layout = wx.BoxSizer(wx.HORIZONTAL)
+        # page数　分子
+        self.p_numerator = wx.StaticText(
+            self, wx.ID_ANY, '', style=wx.TE_CENTER
+        )
+        slash = wx.StaticText(
+            self, wx.ID_ANY, '/', style=wx.TE_CENTER
+        )
+        # page数　分母
+        self.p_denominator = wx.StaticText(
+            self, wx.ID_ANY, '', style=wx.TE_CENTER
+        )
+        # 桁数が増えるとずれるため、分子側のみ余白を多めに取る
+        self.n_page_layout.Add(
+            self.p_numerator, flag=wx.ALIGN_LEFT | wx.RIGHT, border=25
+        )
+        self.n_page_layout.Add(
+            slash, flag=wx.ALIGN_CENTER | wx.RIGHT, border=8)
+        self.n_page_layout.Add(
+            self.p_denominator, flag=wx.ALIGN_CENTER | wx.RIGHT, border=8
+        )
+
     def set_query_text(self, rate_q, ope_q):
         """
         クエリのレート・比較演算子をパネルに反映
@@ -272,17 +301,26 @@ class EntryListPanel(wx.Panel):
         # インデックスを初期化
         self.idx_max = len(self.s_result) // self.n_item_per_page - 1
         self.idx_min = 0
+        # エントリリストのページ数を設定
+        self.p_numerator.SetLabel("1")
+        self.p_denominator.SetLabel(str(self.idx_max + 1))
 
     def click_next_button(self, event):
         if self.e_list_idx == self.idx_max:
             return
         self.e_list_idx += 1
+        # ページ数更新
+        self.p_numerator.SetLabel(str(self.e_list_idx + 1))
+        # サムネイル、タイトル更新
         self.update_thumbnail_and_title(self.e_list_idx)
 
     def click_previous_button(self, event):
         if self.e_list_idx == self.idx_min:
             return
         self.e_list_idx -= 1
+        # ページ数更新
+        self.p_numerator.SetLabel(str(self.e_list_idx + 1))
+        # サムネイル、タイトル更新
         self.update_thumbnail_and_title(self.e_list_idx)
 
     def update_entry_list(self, search_result):
