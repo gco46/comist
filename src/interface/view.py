@@ -598,8 +598,7 @@ class SearchPanel(wx.Panel):
         return {"$and": query}
 
     def DB_search(self, query):
-        selected = self.GetParent().collection_panel.get_selected_col()
-        col = self.GetParent().db[selected]
+        col = self.GetParent().collection
         result = col.find(query)
         return list(result)
 
@@ -614,7 +613,8 @@ class CollectionPanel(wx.Panel):
         super().__init__(parent, id, style=wx.BORDER_SUNKEN)
 
         self.set_panel_title('Collections')
-        self.set_radio_buttons()
+        self.init_radio_buttons()
+        self.init_selected_col()
 
         self.layout = wx.BoxSizer(wx.VERTICAL)
         self.layout.Add(self.title_text, flag=wx.ALIGN_CENTER)
@@ -635,7 +635,7 @@ class CollectionPanel(wx.Panel):
         )
         self.title_text.SetFont(font_Title)
 
-    def set_radio_buttons(self):
+    def init_radio_buttons(self):
         """
         DB内のコレクション数だけラジオボタン追加
         """
@@ -648,6 +648,12 @@ class CollectionPanel(wx.Panel):
             style=wx.RA_VERTICAL
         )
         self.radio_box.SetFont(font)
+
+    def init_selected_col(self):
+        """
+        初期選択collectionをDBで開く (eromanga_night)
+        """
+        self.GetParent().select_collection("eromanga_night")
 
     def get_selected_col(self):
         """
