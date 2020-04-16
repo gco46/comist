@@ -87,17 +87,20 @@ class ComicViewFrame(wx.Frame):
         """
         ページングボタンを初期化
         """
-        next_page = wx.Button(self, wx.ID_ANY, "=>")
-        prev_page = wx.Button(self, wx.ID_ANY, "<=")
-        next_page.Bind(wx.EVT_BUTTON, self.draw_next_page)
-        prev_page.Bind(wx.EVT_BUTTON, self.draw_prev_page)
+        self.next_page = wx.Button(self, wx.ID_ANY, "=>")
+        self.prev_page = wx.Button(self, wx.ID_ANY, "<=")
+        self.next_page.Bind(wx.EVT_BUTTON, self.draw_next_page)
+        self.prev_page.Bind(wx.EVT_BUTTON, self.draw_prev_page)
+
+        # 最初に前ページボタンを無効化
+        self.prev_page.Disable()
 
         self.button_layout = wx.BoxSizer(wx.HORIZONTAL)
         self.button_layout.Add(
-            prev_page, 200, wx.EXPAND | wx.RIGHT, border=10
+            self.prev_page, 200, wx.EXPAND | wx.RIGHT, border=10
         )
         self.button_layout.Add(
-            next_page, 200, wx.EXPAND | wx.RIGHT, border=10
+            self.next_page, 200, wx.EXPAND | wx.RIGHT, border=10
         )
 
     def init_comic_img(self):
@@ -135,14 +138,22 @@ class ComicViewFrame(wx.Frame):
             choices=["unrated", "1", "2", "3", "4", "5"],
             style=wx.RA_HORIZONTAL
         )
-        self.radio_box.Bind(wx.EVT_LEFT_DOWN, self.register_rate)
-        self.radio_box.SetStringSelection(rate)
+        self.radio_box.Bind(wx.EVT_RADIOBOX, self.register_rate)
+        self.radio_box.SetStringSelection(str(rate))
 
     def register_rate(self, event):
         """
         レートをDBに登録する
         """
-        pass
+        selected = self.radio_box.GetStringSelection()
+        col = self.GetParent().GetParent().collection
+        key = self.entry_info["comic_key"]
+        target = {"comic_key": key}
+        if selected == "unrated":
+            command = {"$set": {"rate": selected}}
+        else:
+            command = {"$set": {"rate": int(selected)}}
+        col.update(target, command)
 
     def init_cont_work_btn(self):
         """
@@ -186,6 +197,9 @@ class ComicViewFrame(wx.Frame):
 
         query = {"comic_key": comic_key}
         prev_entry = col.find_one(query)
+        if prev_entry is None:
+            print("queried entry has not downloaded")
+            return
         self.entry_info = prev_entry
         # --- 再描画処理 ---
         self.update_view_page()
@@ -197,12 +211,15 @@ class ComicViewFrame(wx.Frame):
         col = self.GetParent().GetParent().collection
         c_lst = self.entry_info["continuous_work"]
         e_url = self.entry_info["entry_url"]
-        prev_url = c_lst[c_lst.index(e_url) + 1]
-        comic_key = self.extract_comic_key(prev_url)
+        next_url = c_lst[c_lst.index(e_url) + 1]
+        comic_key = self.extract_comic_key(next_url)
 
         query = {"comic_key": comic_key}
-        prev_entry = col.find_one(query)
-        self.entry_info = prev_entry
+        next_entry = col.find_one(query)
+        if next_entry is None:
+            print("queried entry has not downloaded")
+            return
+        self.entry_info = next_entry
         # --- 再描画処理 ---
         self.update_view_page()
 
@@ -238,7 +255,10 @@ class ComicViewFrame(wx.Frame):
         レートのラジオボタンを更新
         """
         rate = self.entry_info["rate"]
-        self.radio_box.SetStringSelection(rate)
+        if rate == "unrated":
+            self.radio_box.SetStringSelection(rate)
+        else:
+            self.radio_box.SetStringSelection(str(rate))
 
     def update_cont_work_btn(self):
         """
@@ -273,9 +293,12 @@ class ComicViewFrame(wx.Frame):
         """
         ページ送り試作
         """
-        if self.comic_idx >= self.idx_max:
-            return
         self.comic_idx += 1
+        # 1ページ進んだため　前ページボタンは有効化
+        self.prev_page.Enable()
+        # ページ終端なら次ページボタンを無効化
+        if self.comic_idx >= self.idx_max:
+            self.next_page.Disable()
         window_list = self.layout.GetChildren()
         comic_window = window_list[1].GetWindow()
         image = wx.Image(str(self.image_list[self.comic_idx]))
@@ -288,9 +311,12 @@ class ComicViewFrame(wx.Frame):
         """
         ページ戻し試作
         """
-        if self.comic_idx <= self.idx_min:
-            return
         self.comic_idx -= 1
+        # 1ページ戻ったため　次ページボタンは有効化
+        self.next_page.Enable()
+        # ページ終端なら前ページボタンを無効化
+        if self.comic_idx == self.idx_min:
+            self.prev_page.Disable()
         window_list = self.layout.GetChildren()
         comic_window = window_list[1].GetWindow()
         image = wx.Image(str(self.image_list[self.comic_idx]))
