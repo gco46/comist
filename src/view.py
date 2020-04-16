@@ -73,7 +73,7 @@ class EntryListPanel(wx.Panel):
     grid_row = 3
     grid_col = 4
     n_item_per_page = grid_row * grid_col
-    image_path = Path('../../data/Comics')
+    image_path = Path('../data/Comics')
     no_image_path = image_path / 'no_image.png'
     img_w = 180
     img_h = 260
