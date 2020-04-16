@@ -227,6 +227,7 @@ class ComicViewFrame(wx.Frame):
         self.update_info_text()
         self.update_comic_img()
         self.update_rate_rdbtn()
+        self.update_paging_button()
         self.update_cont_work_btn()
         self.Layout()
 
@@ -259,6 +260,13 @@ class ComicViewFrame(wx.Frame):
             self.radio_box.SetStringSelection(rate)
         else:
             self.radio_box.SetStringSelection(str(rate))
+
+    def update_paging_button(self):
+        """
+        ページ送りボタンを更新
+        """
+        self.next_page.Enable()
+        self.prev_page.Disable()
 
     def update_cont_work_btn(self):
         """
