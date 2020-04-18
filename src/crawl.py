@@ -9,11 +9,11 @@ class CrawlFrame(wx.Frame):
         super().__init__(parent, wx.ID_ANY, 'crawl frame')
         # 画面を最大化
         self.Maximize()
-        # クロール状態フラグを初期化
-        self.is_crawling = False
-        self.target_website = TargetWebPanel(self)
-        self.target_category = TargetCategoryPanel(self)
 
+        self.target_website = TargetWebPanel(self)
+        self.target_category = CrawlOptionPanel(self)
+
+        # 標準出力表示用のテキストボックス追加
         style = wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL
         self.log = wx.TextCtrl(self, wx.ID_ANY, style=style)
 
@@ -32,6 +32,9 @@ class CrawlFrame(wx.Frame):
 
 
 class TargetWebPanel(wx.Panel):
+    """
+    クロール対象のwebsiteを選択するパネル
+    """
 
     weblist = [
         "eromanga_night"
@@ -82,7 +85,10 @@ class TargetWebPanel(wx.Panel):
         return self.radio_box.GetStringSelection()
 
 
-class TargetCategoryPanel(wx.Panel):
+class CrawlOptionPanel(wx.Panel):
+    """
+    クロール時のオプションを指定するパネル
+    """
     category_dict = {
         "eromanga_night": {
             "eromanga-night": "エロ漫画の夜",
@@ -114,8 +120,8 @@ class TargetCategoryPanel(wx.Panel):
         # カテゴリを選択するlayout作成
         self.set_categories_chkbox()
 
-        # DB初期化チェックボックス
-        self.set_initialize_chkbox()
+        # オプションチェックボックス
+        self.set_option_chkbox()
 
         # クロール開始ボタン
         self.start_crawl_btn = wx.Button(self, wx.ID_ANY, 'START')
@@ -125,7 +131,7 @@ class TargetCategoryPanel(wx.Panel):
         self.layout.Add(self.title_text, flag=wx.ALIGN_CENTER)
         self.layout.Add(self.category_chkbox,
                         flag=wx.ALIGN_CENTER | wx.TOP, border=15)
-        self.layout.Add(self.init_DB_chkbox,
+        self.layout.Add(self.option_layout,
                         flag=wx.ALIGN_CENTER | wx.TOP | wx.BOTTOM, border=40)
         self.layout.Add(self.start_crawl_btn,
                         flag=wx.ALIGN_RIGHT)
@@ -145,7 +151,10 @@ class TargetCategoryPanel(wx.Panel):
         )
         self.title_text.SetFont(font_Title)
 
-    def set_initialize_chkbox(self):
+    def set_option_chkbox(self):
+        """
+        オプション選択のチェックボックス設定
+        """
         self.init_DB_chkbox = wx.CheckBox(
             self, wx.ID_ANY, "Initialize DB",
         )
@@ -153,9 +162,23 @@ class TargetCategoryPanel(wx.Panel):
             16, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL,
             wx.FONTWEIGHT_NORMAL
         )
+        self.end_crawl_chkbox = wx.CheckBox(
+            self, wx.ID_ANY, "Early termination"
+        )
         self.init_DB_chkbox.SetFont(font)
+        self.end_crawl_chkbox.SetFont(font)
+        self.option_layout = wx.BoxSizer(wx.VERTICAL)
+        self.option_layout.Add(
+            self.init_DB_chkbox, flag=wx.ALIGN_CENTER | wx.BOTTOM, border=10
+        )
+        self.option_layout.Add(
+            self.end_crawl_chkbox, flag=wx.ALIGN_CENTER
+        )
 
     def set_categories_chkbox(self):
+        """
+        対象のカテゴリを設定
+        """
         selected = self.GetParent().target_website.get_selected_col()
 
         categories = self.category_dict[selected].keys()
@@ -190,24 +213,31 @@ class TargetCategoryPanel(wx.Panel):
         """
         クロールコマンド実行処理
         """
-        self.GetParent().is_crawling = True
         selected = self.category_chkbox.GetCheckedStrings()
         category = ",".join(selected)
+        # scrapyに渡すコマンドを作成
         cat_cmd = " -a category=" + category
         init_cmd = self.confirm_initialization()
+        end_cmd = self.confirm_early_terminate()
+        # DB初期化確認にてキャンセルされた場合、クロールを中止する
         if init_cmd is None:
             return
         if len(selected) == 0:
             print("no categories are checked")
             return
-        cmd = "scrapy crawl GetComics" + cat_cmd + init_cmd
-        for line in self.get_lines():
-            print(line)
+
+        cmd = "scrapy crawl GetComics" + cat_cmd + init_cmd + end_cmd
+        for line in self.get_lines(cmd):
+            print(line, end="")
+        print("------------------------")
+        print("----- end crawling -----")
+        print("------------------------")
+        print("")
 
     def confirm_initialization(self):
         """
         DB初期化の確認
-        キャンセルした場合はクロール中止
+        キャンセルした場合はクロール中止(Noneを返す)
         """
         if self.init_DB_chkbox.IsChecked():
             dialog = wx.MessageDialog(
@@ -223,16 +253,29 @@ class TargetCategoryPanel(wx.Panel):
         else:
             return ""
 
+    def confirm_early_terminate(self):
+        """
+        クロールの早期終了の確認
+        """
+        if self.end_crawl_chkbox.IsChecked():
+            return " -a end_crawl=1"
+        else:
+            return ""
+
     def get_lines(self, cmd):
         """
         コマンド実行後、標準出力を一行ずつ取得
         """
-        proc = subprocess.Popen(
+        self.proc = subprocess.Popen(
             cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         while True:
-            line = proc.stdout.readline()
+            line = self.proc.stdout.readline()
             if line:
+                try:
+                    line = line.decode('utf-8')
+                except UnicodeDecodeError:
+                    continue
                 yield line
 
-            if not line and proc.poll() is not None:
+            if not line and self.proc.poll() is not None:
                 break
