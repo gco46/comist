@@ -87,8 +87,8 @@ class ComicViewFrame(wx.Frame):
         """
         ページングボタンを初期化
         """
-        self.next_page = wx.Button(self, wx.ID_ANY, "=>")
-        self.prev_page = wx.Button(self, wx.ID_ANY, "<=")
+        self.next_page = wx.Button(self, wx.ID_ANY, "=>", size=(400, 100))
+        self.prev_page = wx.Button(self, wx.ID_ANY, "<=", size=(400, 100))
         self.next_page.Bind(wx.EVT_BUTTON, self.draw_next_page)
         self.prev_page.Bind(wx.EVT_BUTTON, self.draw_prev_page)
 
@@ -97,10 +97,10 @@ class ComicViewFrame(wx.Frame):
 
         self.button_layout = wx.BoxSizer(wx.HORIZONTAL)
         self.button_layout.Add(
-            self.prev_page, 200, wx.EXPAND | wx.RIGHT, border=10
+            self.prev_page, flag=wx.ALIGN_CENTER | wx.LEFT, border=20
         )
         self.button_layout.Add(
-            self.next_page, 200, wx.EXPAND | wx.RIGHT, border=10
+            self.next_page, flag=wx.ALIGN_CENTER | wx.LEFT, border=10
         )
 
     def init_comic_img(self):
