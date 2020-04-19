@@ -2,6 +2,7 @@ import wx
 import sys
 from pathlib import Path
 import subprocess
+import threading
 
 
 class CrawlFrame(wx.Frame):
@@ -123,9 +124,12 @@ class CrawlOptionPanel(wx.Panel):
         # オプションチェックボックス
         self.set_option_chkbox()
 
-        # クロール開始ボタン
-        self.start_crawl_btn = wx.Button(self, wx.ID_ANY, 'START')
-        self.start_crawl_btn.Bind(wx.EVT_BUTTON, self.click_start_crawl)
+        # クロール中止フラグ
+        self.cancel_crawling = False
+
+        # クロール制御ボタン
+        self.crawl_button = wx.Button(self, wx.ID_ANY, 'START')
+        self.crawl_button.Bind(wx.EVT_BUTTON, self.click_crawl_button)
 
         self.layout = wx.BoxSizer(wx.VERTICAL)
         self.layout.Add(self.title_text, flag=wx.ALIGN_CENTER)
@@ -133,7 +137,7 @@ class CrawlOptionPanel(wx.Panel):
                         flag=wx.ALIGN_CENTER | wx.TOP, border=15)
         self.layout.Add(self.option_layout,
                         flag=wx.ALIGN_CENTER | wx.TOP | wx.BOTTOM, border=40)
-        self.layout.Add(self.start_crawl_btn,
+        self.layout.Add(self.crawl_button,
                         flag=wx.ALIGN_RIGHT)
 
         self.SetSizer(self.layout)
@@ -189,23 +193,39 @@ class CrawlOptionPanel(wx.Panel):
         )
         self.category_chkbox.SetFont(self.font)
 
-    def click_start_crawl(self, event):
+    def click_crawl_button(self, event):
         """
-        クロール開始ボタン
+        クロール制御ボタン
         """
-        dialog = wx.MessageDialog(
-            None, 'start crawling?',
-            style=wx.YES_NO
-        )
-        res = dialog.ShowModal()
-        if res == wx.ID_YES:
-            print("------------------------")
-            print("---- start crawling ----")
-            print("------------------------")
-            print("")
-            self.crawl_command()
-        elif res == wx.ID_NO:
-            pass
+        # 開始処理
+        if self.crawl_button.GetLabel() == "START":
+            dialog = wx.MessageDialog(
+                None, 'start crawling?',
+                style=wx.YES_NO
+            )
+            res = dialog.ShowModal()
+            if res == wx.ID_YES:
+                # 開始前にクロール中止フラグを初期化
+                self.cancel_crawling = False
+                self.thread = threading.Thread(target=self.crawl_command)
+                self.thread.start()
+            elif res == wx.ID_NO:
+                pass
+
+        # 停止処理
+        elif self.crawl_button.GetLabel() == "STOP":
+            dialog = wx.MessageDialog(
+                None, 'cancel crawling?',
+                style=wx.YES_NO
+            )
+            res = dialog.ShowModal()
+            if res == wx.ID_YES:
+                # 停止処理中は要求を受けつけないために、ボタンを無効化
+                self.crawl_button.Disable()
+                print("---- stopping -----")
+                # クロール中止フラグをONにし、処理が完了するまで待機
+                self.cancel_crawling = True
+                self.crawl_button.Enable()
 
         dialog.Destroy()
 
@@ -213,6 +233,21 @@ class CrawlOptionPanel(wx.Panel):
         """
         クロールコマンド実行処理
         """
+        self.crawl_button.SetLabel("STOP")
+        print("------------------------")
+        print("---- start crawling ----")
+        print("------------------------")
+        print("")
+
+        self.execute_crawling()
+
+        print("------------------------")
+        print("----- end crawling -----")
+        print("------------------------")
+        print("")
+        self.crawl_button.SetLabel("START")
+
+    def execute_crawling(self):
         selected = self.category_chkbox.GetCheckedStrings()
         category = ",".join(selected)
         # scrapyに渡すコマンドを作成
@@ -228,11 +263,12 @@ class CrawlOptionPanel(wx.Panel):
 
         cmd = "scrapy crawl GetComics" + cat_cmd + init_cmd + end_cmd
         for line in self.get_lines(cmd):
+            # 停止ボタン押下時、サブプロセスを停止
+            if self.cancel_crawling:
+                print("------- canceled -------")
+                self.proc.terminate()
+                break
             print(line, end="")
-        print("------------------------")
-        print("----- end crawling -----")
-        print("------------------------")
-        print("")
 
     def confirm_initialization(self):
         """
@@ -266,8 +302,10 @@ class CrawlOptionPanel(wx.Panel):
         """
         コマンド実行後、標準出力を一行ずつ取得
         """
+        # 非同期処理でスクレイピングを実行
         self.proc = subprocess.Popen(
-            cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        # 標準出力を一行ずつ取得し、リアルタイム表示するためにループを回す
         while True:
             line = self.proc.stdout.readline()
             if line:
@@ -277,5 +315,6 @@ class CrawlOptionPanel(wx.Panel):
                     continue
                 yield line
 
+            # 出力がなくなり、サブプロセス処理が完了したらbreak
             if not line and self.proc.poll() is not None:
                 break
