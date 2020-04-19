@@ -136,19 +136,9 @@ class EntryListPanel(wx.Panel):
             self, wx.ID_ANY, "Rate : ", style=wx.TE_CENTER
         )
         rate_text.SetFont(font)
-        self.operator = wx.StaticText(
-            self, wx.ID_ANY, "", style=wx.TE_CENTER
-        )
-        self.operator.SetFont(font)
-        self.selected_rate = wx.StaticText(
-            self, wx.ID_ANY, "", style=wx.TE_CENTER
-        )
-        self.selected_rate.SetFont(font)
 
         self.rate_layout = wx.BoxSizer(wx.HORIZONTAL)
         self.rate_layout.Add(rate_text, flag=wx.ALIGN_CENTER)
-        self.rate_layout.Add(self.operator, flag=wx.ALIGN_CENTER)
-        self.rate_layout.Add(self.selected_rate, flag=wx.ALIGN_CENTER)
 
     def init_category_layout(self):
         font = wx.Font(
@@ -177,12 +167,12 @@ class EntryListPanel(wx.Panel):
         self.search_layout.Add(
             self.rate_layout,
             flag=wx.ALIGN_CENTER | wx.RIGHT | wx.LEFT,
-            border=30
+            border=60
         )
         self.search_layout.Add(
             self.category_layout,
             flag=wx.ALIGN_CENTER | wx.RIGHT | wx.LEFT,
-            border=30
+            border=60
         )
 
     def init_thumbnails(self):
@@ -409,11 +399,23 @@ class EntryListPanel(wx.Panel):
         tmp = -(-len(self.s_result) // self.n_item_per_page) * \
             self.n_item_per_page
         self.s_result += [""] * (tmp - len(self.s_result))
-        # TODO: EntryPanel上部のRate, Categoryのテキストを更新
         # エントリリストの0ページ目を描画
         self.update_thumbnail_and_title(0)
         # entry panelのページング処理を有効化
         self.enable_entry_paging()
+
+    def update_query_text(self, operator, rate, category):
+        """
+        パネル上部のクエリ情報を更新
+        """
+        # レート, 比較演算子を反映
+        rate_text = self.rate_layout.GetChildren()[0]
+        rate_text = rate_text.GetWindow()
+        rate_text.SetLabel("Rate : " + operator + rate)
+        # カテゴリ表示を反映
+        cat_text = self.category_layout.GetChildren()[1]
+        cat_text = cat_text.GetWindow()
+        cat_text.SetLabel(category)
 
     def update_thumbnail_and_title(self, idx):
         for i in range(self.n_item_per_page):
@@ -456,27 +458,27 @@ class SearchPanel(wx.Panel):
     ViewFrame内
     エントリー一覧を表示するパネル(ウィンドウ中央に配置)
     """
-    # TODO: サーチパネルに表示するカテゴリを日本語化する
     category_dict = {
-        "eromanga_night": {
-            "eromanga-night": "エロ漫画の夜",
-            "gyaru": "ギャル",
-            "hinnyu": "貧乳",
-            "jingai-kemono": "人外・獣",
-            "jk-jc": "JK・JC",
-            "jyukujyo-hitozuma": "熟女・人妻",
-            "kinshinsoukan": "近親相姦",
-            "kosupure": "コスプレ",
-            "kyonyu-binyu": "巨乳・美乳",
-            "netorare-netori": "寝取られ・寝取り",
-            "ol-sister": "OL・お姉さん",
-            "onesyota": "おねショタ",
-            "rape": "レイプ",
-            "rezu-yuri": "レズ・百合",
-            "ALL": "全て"
-        }
-
+        "eromanga_night": [
+            "エロ漫画の夜",
+            "ギャル",
+            "貧乳",
+            "人外・獣",
+            "JK・JC",
+            "熟女・人妻",
+            "近親相姦",
+            "コスプレ",
+            "巨乳・美乳",
+            "寝取られ・寝取り",
+            "OL・お姉さん",
+            "おねショタ",
+            "レイプ",
+            "レズ・百合",
+            "ALL"
+        ]
     }
+    # eromanga_night コレクション　全カテゴリ指定時のインデックス
+    COL1_ALL_CAT_INDEX = 14
 
     def __init__(self, parent, id):
         super().__init__(parent, id, style=wx.BORDER_SUNKEN)
@@ -534,12 +536,13 @@ class SearchPanel(wx.Panel):
         self.rate_cmbbox = wx.ComboBox(self, wx.ID_ANY, 'choose',
                                        choices=elements, style=wx.CB_READONLY)
         # 比較演算子選択コンボボックス
-        operators = ['', '==', '>=', '<=']
+        operators = ['', '>=', '<=']
         self.operator_cmbbox = wx.ComboBox(
             self, wx.ID_ANY, 'choose', choices=operators, style=wx.CB_READONLY
         )
 
-        # TODO: 'unrated'選択時に比較演算子コンボボックスを無効にする(優先度低)
+        # 'unrated'選択時に比較演算子コンボボックスを空にする
+        self.rate_cmbbox.Bind(wx.EVT_COMBOBOX, self.reset_operator_cmbbox)
 
         self.rate_layout.Add(rate_text, flag=wx.RIGHT, border=30)
         self.rate_layout.Add(self.operator_cmbbox, flag=wx.RIGHT, border=5)
@@ -552,7 +555,7 @@ class SearchPanel(wx.Panel):
         # CollectionPanelで設定したコレクションからカテゴリを特定
         selected = self.GetParent().collection_panel.get_selected_col()
         # カテゴリ一覧からキーのリスト取得
-        categories = self.category_dict[selected].keys()
+        categories = self.category_dict[selected]
         categories = list(categories)
         self.category_rdbox = wx.RadioBox(
             self, wx.ID_ANY, 'categories', choices=categories,
@@ -560,12 +563,25 @@ class SearchPanel(wx.Panel):
         )
         self.category_rdbox.SetFont(self.font)
 
+    def reset_operator_cmbbox(self, event):
+        """
+        レートのコンボボックスにunratedが選択された時、比較演算子をクリア
+        """
+        selected_rate = self.rate_cmbbox.GetStringSelection()
+        # unratedが選択された時は比較演算子を空にする
+        if selected_rate == "unrated":
+            self.operator_cmbbox.SetStringSelection('')
+
     def click_search(self, event):
         # コンボボックス、ラジオボタンの選択状態を取得
         rate_q = self.rate_cmbbox.GetStringSelection()
         operator_q = self.operator_cmbbox.GetStringSelection()
-        category_q = self.category_rdbox.GetStringSelection()
-        # 取得した選択状態からでクエリ作成、DB検索
+        # カテゴリのクエリを取得
+        category_q_idx = self.category_rdbox.GetSelection()
+        selected = self.GetParent().collection_panel.get_selected_col()
+        category_q = self.category_dict[selected][category_q_idx]
+
+        # 取得した選択状態からクエリ作成、DB検索
         query = self.make_query(rate_q, operator_q, category_q)
         # rateが選択されていない場合は終了
         if query is None:
@@ -574,15 +590,15 @@ class SearchPanel(wx.Panel):
         # 検索結果が0件の場合は終了
         if len(search_result) == 0:
             return
-        # EntryListPanelのメソッドを呼び出して検索結果を渡す
+        # EntryListPanelの検索クエリを更新
+        self.GetParent().entry_panel.update_query_text(operator_q, rate_q, category_q)
+        # EntryListPanelのエントリー一覧を更新
         self.GetParent().entry_panel.update_entry_list(search_result)
 
     def make_query(self, rate, operator, category):
         query = []
         if category != "ALL":
-            selected = self.GetParent().collection_panel.get_selected_col()
-            c_dict = self.category_dict[selected]
-            query.append({"category": c_dict[category]})
+            query.append({"category": category})
         if rate == "":
             return
         elif rate == "unrated":
