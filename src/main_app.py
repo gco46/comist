@@ -1,5 +1,6 @@
 import wx
 from view import ViewFrame
+from crawl import CrawlFrame
 
 
 class MyFrame(wx.Frame):
@@ -22,7 +23,7 @@ class MyFrame(wx.Frame):
         self.Show(True)
 
     def OnClickScraping(self, event):
-        print("scraping button")
+        scrape = CrawlFrame(self)
 
     def OnClickViewComics(self, event):
         view_frame = ViewFrame(self)
