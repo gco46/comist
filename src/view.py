@@ -582,11 +582,11 @@ class SearchPanel(wx.Panel):
         category_q = self.category_dict[selected][category_q_idx]
 
         # 取得した選択状態からクエリ作成、DB検索
-        query = self.make_query(rate_q, operator_q, category_q)
+        self.query = self.make_query(rate_q, operator_q, category_q)
         # rateが選択されていない場合は終了
-        if query is None:
+        if self.query is None:
             return
-        search_result = self.DB_search(query)
+        search_result = self.DB_search(self.query)
         # 検索結果が0件の場合は終了
         if len(search_result) == 0:
             return

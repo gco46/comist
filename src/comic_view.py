@@ -12,6 +12,7 @@ class ComicViewFrame(wx.Frame):
     def __init__(self, parent, entry_info):
         super().__init__(parent, wx.ID_ANY)
         self.Maximize()
+        self.Bind(wx.EVT_CLOSE, self.close_frame)
         self.entry_info = entry_info
 
         # パネル上部の漫画情報を更新
@@ -48,6 +49,17 @@ class ComicViewFrame(wx.Frame):
         self.SetSizer(self.layout)
         self.Centre()
         self.Show(True)
+
+    def close_frame(self, event):
+        """
+        Frameを閉じた時にentry list panelを更新
+        """
+        # search panelからクエリを取得し、再検索と画面更新
+        query = self.GetParent().GetParent().search_panel.query
+        search_result = self.GetParent().GetParent().search_panel.DB_search(query)
+        self.GetParent().update_entry_list(search_result)
+        # 画面を閉じる
+        self.Destroy()
 
     def init_info_text(self):
         """
@@ -111,6 +123,7 @@ class ComicViewFrame(wx.Frame):
 
         # 描画のためにBitmapオブジェクトに変換する必要あり
         image = wx.Image(str(self.image_list[0]))
+        image = image.Scale(image.Width, image.Height, wx.IMAGE_QUALITY_HIGH)
         bitmap = image.ConvertToBitmap()
         self.comic_img = wx.StaticBitmap(
             self, wx.ID_ANY, bitmap, size=bitmap.GetSize())
@@ -248,6 +261,7 @@ class ComicViewFrame(wx.Frame):
         """
         self.init_imglist_and_idxs()
         image = wx.Image(str(self.image_list[0]))
+        image = image.Scale(image.Width, image.Height, wx.IMAGE_QUALITY_HIGH)
         bitmap = image.ConvertToBitmap()
         self.comic_img.SetBitmap(bitmap)
 
