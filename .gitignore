@@ -1,11 +1,10 @@
 .vscode/
 __pycache__/
-lib_test/
 .ipynb_checkpoints/
 .gitignore
 Comics/
-features/
-ukbench/
 db/
 mongodb/
 .scrapy/
+Pipfile
+Pipfile.lock
