@@ -1,7 +1,8 @@
 import wx
 from pymongo import MongoClient
 from pathlib import Path
-from comic_view import ComicViewFrame
+from frames.comic_view import ComicViewFrame
+import frames.const as c_
 
 
 class ViewFrame(wx.Frame):
@@ -73,7 +74,7 @@ class EntryListPanel(wx.Panel):
     grid_row = 3
     grid_col = 4
     n_item_per_page = grid_row * grid_col
-    image_path = Path('../data/Comics')
+    image_path = c_.IMAGE_PATH
     no_image_path = image_path / 'no_image.png'
     img_w = 180
     img_h = 260

@@ -1,6 +1,6 @@
 import wx
-from view import ViewFrame
-from crawl import CrawlFrame
+from frames.view import ViewFrame
+from frames.crawl import CrawlFrame
 
 
 class MyFrame(wx.Frame):
@@ -31,5 +31,5 @@ class MyFrame(wx.Frame):
 
 if __name__ == "__main__":
     app = wx.App()
-    MyFrame(None, -1, 'moveevent.py')
+    MyFrame(None, -1, 'ComicCluster')
     app.MainLoop()

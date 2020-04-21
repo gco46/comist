@@ -3,6 +3,7 @@ import sys
 from pathlib import Path
 import subprocess
 import threading
+import os
 
 
 class CrawlFrame(wx.Frame):
@@ -222,7 +223,7 @@ class CrawlOptionPanel(wx.Panel):
             if res == wx.ID_YES:
                 # 停止処理中は要求を受けつけないために、ボタンを無効化
                 self.crawl_button.Disable()
-                print("---- stopping -----")
+                print("------ canceling -------")
                 # クロール中止フラグをONにし、処理が完了するまで待機
                 self.cancel_crawling = True
                 self.crawl_button.Enable()
@@ -304,7 +305,8 @@ class CrawlOptionPanel(wx.Panel):
         """
         # 非同期処理でスクレイピングを実行
         self.proc = subprocess.Popen(
-            cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            cmd, cwd="scrapy/",
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         # 標準出力を一行ずつ取得し、リアルタイム表示するためにループを回す
         while True:
             line = self.proc.stdout.readline()
