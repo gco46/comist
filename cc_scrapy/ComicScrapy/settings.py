@@ -70,7 +70,6 @@ DOWNLOAD_DELAY = 5.0
 ITEM_PIPELINES = {
     'ComicScrapy.pipelines.SaveComicPipeline': 500,
     'ComicScrapy.pipelines.MongoPipeline': 300,
-    'ComicScrapy.pipelines.SymboliclinkPipeline': 800
 }
 IMAGES_STORE = '../data/Comics'
 
