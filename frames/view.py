@@ -589,6 +589,7 @@ class SearchPanel(wx.Panel):
             return
         search_result = self.DB_search(self.query)
         # 検索結果が0件の場合は終了
+        # TODO: 検索結果が0件である旨をdialogで表示
         if len(search_result) == 0:
             return
         # EntryListPanelの検索クエリを更新

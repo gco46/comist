@@ -11,6 +11,7 @@ class CrawlFrame(wx.Frame):
         super().__init__(parent, wx.ID_ANY, 'crawl frame')
         # 画面を最大化
         self.Maximize()
+        # TODO: スクレイピング中に閉じられた際に警告を出す
 
         self.target_website = TargetWebPanel(self)
         self.target_category = CrawlOptionPanel(self)
@@ -305,7 +306,7 @@ class CrawlOptionPanel(wx.Panel):
         """
         # 非同期処理でスクレイピングを実行
         self.proc = subprocess.Popen(
-            cmd, cwd="scrapy/",
+            cmd, cwd="cc_scrapy/",
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         # 標準出力を一行ずつ取得し、リアルタイム表示するためにループを回す
         while True:
