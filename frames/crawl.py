@@ -11,19 +11,20 @@ class CrawlFrame(wx.Frame):
         super().__init__(parent, wx.ID_ANY, 'crawl frame')
         # 画面を最大化
         self.Maximize()
-        # TODO: スクレイピング中に閉じられた際に警告を出す
+        # CLOSEイベント
+        self.Bind(wx.EVT_CLOSE, self.close_frame)
 
-        self.target_website = TargetWebPanel(self)
-        self.target_category = CrawlOptionPanel(self)
+        self.target_web_panel = TargetWebPanel(self)
+        self.option_panel = CrawlOptionPanel(self)
 
         # 標準出力表示用のテキストボックス追加
         style = wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL
         self.log = wx.TextCtrl(self, wx.ID_ANY, style=style)
 
         self.layout = wx.BoxSizer(wx.HORIZONTAL)
-        self.layout.Add(self.target_website, proportion=2,
+        self.layout.Add(self.target_web_panel, proportion=2,
                         flag=wx.EXPAND | wx.ALL, border=5)
-        self.layout.Add(self.target_category, proportion=2,
+        self.layout.Add(self.option_panel, proportion=2,
                         flag=wx.EXPAND | wx.ALL, border=5)
         self.layout.Add(self.log, proportion=3,
                         flag=wx.EXPAND | wx.ALL, border=5)
@@ -32,6 +33,23 @@ class CrawlFrame(wx.Frame):
         sys.stdout = self.log
         self.Centre()
         self.Show(True)
+
+    def close_frame(self, event):
+        """
+        crawl中はframeを閉じられないようにする
+        (スレッド処理が生き残るため)
+        """
+        btn_label = self.option_panel.crawl_button.GetLabel()
+        # crawling中ならば, 先にSTOPするようにダイアログで表示する
+        if btn_label == "STOP":
+            dialog = wx.MessageDialog(
+                None,
+                'If you want to quit, please press the stop button first.',
+                style=wx.OK
+            )
+            dialog.ShowModal()
+        else:
+            self.Destroy()
 
 
 class TargetWebPanel(wx.Panel):
@@ -185,7 +203,7 @@ class CrawlOptionPanel(wx.Panel):
         """
         対象のカテゴリを設定
         """
-        selected = self.GetParent().target_website.get_selected_col()
+        selected = self.GetParent().target_web_panel.get_selected_col()
 
         categories = self.category_dict[selected].keys()
         categories = list(categories)
@@ -217,7 +235,8 @@ class CrawlOptionPanel(wx.Panel):
         # 停止処理
         elif self.crawl_button.GetLabel() == "STOP":
             dialog = wx.MessageDialog(
-                None, 'cancel crawling?',
+                None,
+                'cancel crawling? There may be inconsistencies in the database and storage.',
                 style=wx.YES_NO
             )
             res = dialog.ShowModal()

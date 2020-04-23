@@ -28,6 +28,7 @@ class ComicViewFrame(wx.Frame):
         # ページ送りボタン
         self.init_paging_button()
 
+        # 画像表示
         self.init_comic_img()
 
         # 左側に操作パネル、右側に画像を配置
@@ -58,7 +59,12 @@ class ComicViewFrame(wx.Frame):
         # search panelからクエリを取得し、再検索と画面更新
         query = self.GetParent().GetParent().search_panel.query
         search_result = self.GetParent().GetParent().search_panel.DB_search(query)
-        self.GetParent().update_entry_list(search_result)
+        # 再検索後のエントリ数から表示するページ数を算出
+        n_item_per_page = self.GetParent().n_item_per_page
+        max_idx = -(-len(search_result) // n_item_per_page) - 1
+        n_page = self.GetParent().e_list_idx
+        n_page = min(max_idx, n_page)
+        self.GetParent().update_entry_list(search_result, n_page)
         # 画面を閉じる
         self.Destroy()
 
@@ -75,10 +81,10 @@ class ComicViewFrame(wx.Frame):
             self, wx.ID_ANY, self.entry_info["author"], style=wx.TE_CENTER)
         self.author_text.SetFont(font)
         self.category_text = wx.StaticText(
-            self, wx.ID_ANY, self.entry_info["category"], style=wx.TE_CENTER)
+            self, wx.ID_ANY, self.entry_info["comic_key"], style=wx.TE_CENTER)
         self.category_text.SetFont(font)
         category_t = wx.StaticText(
-            self, wx.ID_ANY, "Category : ", style=wx.TE_CENTER
+            self, wx.ID_ANY, "Comic ID : ", style=wx.TE_CENTER
         )
         category_t.SetFont(font)
         cat_set = wx.BoxSizer(wx.HORIZONTAL)
@@ -211,8 +217,18 @@ class ComicViewFrame(wx.Frame):
 
         query = {"comic_key": comic_key}
         prev_entry = col.find_one(query)
+        # 前の作品が未ダウンロードの場合はdialog表示
         if prev_entry is None:
-            print("queried entry has not downloaded")
+            category, id = comic_key.split("/")
+            dialog = wx.MessageDialog(
+                None,
+                'The comic has not downloaded yet.\n \
+                category: {0}\n \
+                id: {1}'.format(category, id),
+                style=wx.OK | wx.ALIGN_LEFT
+            )
+            dialog.ShowModal()
+            dialog.Destroy()
             return
         self.entry_info = prev_entry
         # --- 再描画処理 ---
@@ -230,8 +246,18 @@ class ComicViewFrame(wx.Frame):
 
         query = {"comic_key": comic_key}
         next_entry = col.find_one(query)
+        # 次の作品が未ダウンロードの場合はdialog表示
         if next_entry is None:
-            print("queried entry has not downloaded")
+            category, id = comic_key.split("/")
+            dialog = wx.MessageDialog(
+                None,
+                'The comic has not downloaded yet.\n \
+                category: {0}\n \
+                id: {1}'.format(category, id),
+                style=wx.OK | wx.ALIGN_LEFT
+            )
+            dialog.ShowModal()
+            dialog.Destroy()
             return
         self.entry_info = next_entry
         # --- 再描画処理 ---

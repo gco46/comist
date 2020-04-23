@@ -273,19 +273,19 @@ class EntryListPanel(wx.Panel):
         self.operator.SetLabel(ope_q)
         self.selected_rate.SetLabel(rate_q)
 
-    def enable_entry_paging(self):
+    def update_entry_paging(self, idx):
         """
-        エントリリストのページングを有効化する
+        エントリリストのページングを有効化・更新する
         """
         # ボタン有効化
         self.next_button.Enable()
         self.previous_button.Enable()
-        # インデックスを初期化
-        self.e_list_idx = 0
+        # インデックスを更新
+        self.e_list_idx = idx
         self.idx_max = len(self.s_result) // self.n_item_per_page - 1
         self.idx_min = 0
         # エントリリストのページ数を設定
-        self.p_numerator.SetLabel("1")
+        self.p_numerator.SetLabel(str(self.e_list_idx + 1))
         self.p_denominator.SetLabel(str(self.idx_max + 1))
 
     def click_next_button(self, event):
@@ -390,20 +390,20 @@ class EntryListPanel(wx.Panel):
             return
         comic_view_frame = ComicViewFrame(self, entry)
 
-    def update_entry_list(self, search_result):
+    def update_entry_list(self, search_result, page=0):
         """
         検索結果からサムネイル情報を更新
         """
         # 検索結果をリスト化
-        # No imageで描画用に、エントリの端数は空文字を入れる
         self.s_result = list(search_result)
+        # No imageで描画用に、エントリの端数は空文字を入れる
         tmp = -(-len(self.s_result) // self.n_item_per_page) * \
             self.n_item_per_page
         self.s_result += [""] * (tmp - len(self.s_result))
-        # エントリリストの0ページ目を描画
-        self.update_thumbnail_and_title(0)
+        # エントリリストの指定ページを描画
+        self.update_thumbnail_and_title(page)
         # entry panelのページング処理を有効化
-        self.enable_entry_paging()
+        self.update_entry_paging(page)
 
     def update_query_text(self, operator, rate, category):
         """
@@ -588,9 +588,14 @@ class SearchPanel(wx.Panel):
         if self.query is None:
             return
         search_result = self.DB_search(self.query)
-        # 検索結果が0件の場合は終了
-        # TODO: 検索結果が0件である旨をdialogで表示
+        # 検索結果が0件の場合はダイアログを表示して終了
         if len(search_result) == 0:
+            dialog = wx.MessageDialog(
+                None, 'There are 0 results.',
+                style=wx.OK
+            )
+            dialog.ShowModal()
+            dialog.Destroy()
             return
         # EntryListPanelの検索クエリを更新
         self.GetParent().entry_panel.update_query_text(operator_q, rate_q, category_q)
