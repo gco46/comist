@@ -8,7 +8,7 @@ class ComicViewFrame(wx.Frame):
     """
     漫画選択後Frame
     """
-    image_path = c_.IMAGE_PATH
+    image_path = c_.COMIC_PATH
 
     def __init__(self, parent, entry_info):
         super().__init__(parent, wx.ID_ANY)

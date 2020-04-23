@@ -74,8 +74,8 @@ class EntryListPanel(wx.Panel):
     grid_row = 3
     grid_col = 4
     n_item_per_page = grid_row * grid_col
-    image_path = c_.IMAGE_PATH
-    no_image_path = image_path / 'no_image.png'
+    image_path = c_.COMIC_PATH
+    no_image_path = c_.NO_IMAGE_PATH
     img_w = 180
     img_h = 260
     hdlr = "self.click_comic_"

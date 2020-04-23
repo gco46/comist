@@ -1,2 +1,3 @@
 from pathlib import Path
-IMAGE_PATH = Path('data/Comics')
+COMIC_PATH = Path('data/Comics')
+NO_IMAGE_PATH = Path('data/no_image.png')
