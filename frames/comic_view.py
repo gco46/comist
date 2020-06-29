@@ -106,8 +106,12 @@ class ComicViewFrame(wx.Frame):
         """
         ページングボタンを初期化
         """
-        self.next_page = wx.Button(self, wx.ID_ANY, "=>", size=(400, 100))
-        self.prev_page = wx.Button(self, wx.ID_ANY, "<=", size=(400, 100))
+        font = wx.Font(20, wx.FONTFAMILY_DEFAULT,
+                       wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL)
+        self.next_page = wx.Button(self, wx.ID_ANY, "→", size=(400, 100))
+        self.next_page.SetFont(font)
+        self.prev_page = wx.Button(self, wx.ID_ANY, "←", size=(400, 100))
+        self.prev_page.SetFont(font)
         self.next_page.Bind(wx.EVT_BUTTON, self.draw_next_page)
         self.prev_page.Bind(wx.EVT_BUTTON, self.draw_prev_page)
 
