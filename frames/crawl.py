@@ -2,7 +2,7 @@ import wx
 import sys
 from pathlib import Path
 import subprocess
-import threading
+from threading import Thread
 import os
 
 
@@ -250,6 +250,41 @@ class CrawlOptionPanel(wx.Panel):
 
         dialog.Destroy()
 
+    def click_start_button(self, event):
+        """
+        クロール開始ボタン
+        """
+        dialog = wx.MessageDialog(
+            None, 'start crawling?',
+            style=wx.YES_NO
+        )
+        res = dialog.ShowModal()
+        if res == wx.ID_YES:
+            # 開始前にクロール中止フラグを初期化
+            # Do: DB初期化確認 
+            # Do: 開始ボタン無効化
+        elif res == wx.ID_NO:
+            pass
+
+    def click_stop_button(self, event):
+        """
+        クロール停止ボタン
+        """
+        dialog = wx.MessageDialog(
+            None,
+            'cancel crawling? There may be inconsistencies in the database and storage.',
+            style=wx.YES_NO
+        )
+        res = dialog.ShowModal()
+        if res == wx.ID_YES:
+            # Do: 停止ボタン無効化
+            print("------ canceling -------")
+            # Do: ScrapeThread停止処理
+            # Do: 開始ボタン有効化
+            
+            self.crawl_button.Enable()
+
+
     def crawl_command(self):
         """
         クロールコマンド実行処理
@@ -340,3 +375,41 @@ class CrawlOptionPanel(wx.Panel):
             # 出力がなくなり、サブプロセス処理が完了したらbreak
             if not line and self.proc.poll() is not None:
                 break
+
+
+class ScrapeThread(Thread):
+    """
+    Scraping thread
+    """
+    def __init__(self, selected_cat, init_db, early_terminate):
+        Thread.__init__()
+        self.want_abort = 0
+        # 取得対象カテゴリ(リスト)
+        self.selected_cat = selected_cat
+        # DB初期化フラグ
+        self.init_db = init_db
+        # 早期終了フラグ(取得済みアイテムヒット時)
+        self.early_terminage = early_terminate
+        self.start()
+
+    def run(self):
+        """
+        thread実行
+        """
+        print("------------------------")
+        print("---- start crawling ----")
+        print("------------------------")
+        print("")
+
+        self.execute_crawling()
+
+        print("------------------------")
+        print("----- end crawling -----")
+        print("------------------------")
+        print("")
+
+    def execute_crawling(self):
+        """
+        クロール開始
+        """
+        pass
