@@ -277,7 +277,10 @@ class CrawlOptionPanel(wx.Panel):
                 # クロール開始
                 self.crawl_start_button.Disable()
                 self.crawl_stop_button.Enable()
-                # TODO: ScrapeThread 開始
+                selected_cat = self.category_chkbox.GetCheckedStrings()
+                init_db = self.init_DB_chkbox.IsChecked()
+                early_term = self.end_crawl_chkbox.IsChecked()
+                self.scrape = ScrapeThread(selected_cat, init_db, early_term)
 
         elif res == wx.ID_NO:
             # 処理なし
@@ -369,7 +372,6 @@ class CrawlOptionPanel(wx.Panel):
                 return
             elif res == wx.ID_YES:
                 return True
-                # return " -a init_db=1"
         else:
             return ""
 
@@ -411,31 +413,31 @@ class ScrapeThread(Thread):
     """
 
     def __init__(self, selected_cat, init_db, early_terminate):
-        Thread.__init__()
+        Thread.__init__(self)
         self.want_abort = 0
         # 取得対象カテゴリ(リスト)
         self.category = " ".join(selected_cat)
         # DB初期化フラグ
         self.init_db = init_db
         # 早期終了フラグ(取得済みアイテムヒット時)
-        self.early_terminage = early_terminate
+        self.early_terminate = early_terminate
         self.start()
 
     def run(self):
         """
         thread実行
         """
-        print("------------------------")
-        print("---- start crawling ----")
-        print("------------------------")
-        print("")
+        wx.CallAfter(print, "------------------------")
+        wx.CallAfter(print, "---- start crawling ----")
+        wx.CallAfter(print, "------------------------")
+        wx.CallAfter(print, "")
 
         self.execute_crawling()
 
-        print("------------------------")
-        print("----- end crawling -----")
-        print("------------------------")
-        print("")
+        wx.CallAfter(print, "------------------------")
+        wx.CallAfter(print, "----- end crawling -----")
+        wx.CallAfter(print, "------------------------")
+        wx.CallAfter(print, "")
 
     def execute_crawling(self):
         """
@@ -443,5 +445,42 @@ class ScrapeThread(Thread):
         """
         # scrapyに渡すコマンドを作成
         cat_cmd = " -a category=" + self.category
+
+        # DB初期化コマンド
         if self.init_db:
-            pass
+            init_cmd = " -a init_db=1"
+        else:
+            init_cmd = ""
+
+        # 早期終了コマンド
+        if self.early_terminate:
+            term_cmd = " -a end_crawl=1"
+        else:
+            term_cmd = ""
+
+        cmd = "scrapy crawl GetComics" + cat_cmd + init_cmd + term_cmd
+        for line in self.get_subprocess_output(cmd):
+            wx.CallAfter(print, line, end="")
+
+    def get_subprocess_output(self, cmd):
+        """
+        スクレイピングサブプロセスを実行
+        """
+        # 非同期処理でスクレイピングを実行
+        cmd = cmd.split()
+        self.proc = subprocess.Popen(
+            cmd, cwd="cc_scrapy/",
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        # 標準出力を一行ずつ取得し、リアルタイム表示するためにループを回す
+        while True:
+            line = self.proc.stdout.readline()
+            if line:
+                try:
+                    line = line.decode('utf-8')
+                except UnicodeDecodeError:
+                    continue
+                yield line
+
+            # 出力がなくなり、サブプロセス処理が完了したらbreak
+            if not line and self.proc.poll() is not None:
+                break
