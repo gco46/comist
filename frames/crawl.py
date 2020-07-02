@@ -36,10 +36,11 @@ class CrawlFrame(wx.Frame):
 
     def close_frame(self, event):
         """
-        crawl中はframeを閉じられないようにする
-        (スレッド処理が生き残るため)
+        ウィンドウ閉じる処理
+        TODO: crawl中はframeを閉じられないようにする
+              (スレッド処理が生き残るため)
         """
-        btn_label = self.option_panel.crawl_button.GetLabel()
+        btn_label = self.option_panel.crawl_start_button.GetLabel()
         # crawling中ならば, 先にSTOPするようにダイアログで表示する
         if btn_label == "STOP":
             dialog = wx.MessageDialog(
@@ -147,9 +148,14 @@ class CrawlOptionPanel(wx.Panel):
         # クロール中止フラグ
         self.cancel_crawling = False
 
-        # クロール制御ボタン
-        self.crawl_button = wx.Button(self, wx.ID_ANY, 'START')
-        self.crawl_button.Bind(wx.EVT_BUTTON, self.click_crawl_button)
+        # クロール開始ボタン
+        self.crawl_start_button = wx.Button(self, wx.ID_ANY, 'START')
+        self.crawl_start_button.Bind(wx.EVT_BUTTON, self.click_start_button)
+        # クロール停止ボタン
+        # クロール中のみ有効のためボタン無効化
+        self.crawl_stop_button = wx.Button(self, wx.ID_ANY, 'STOP')
+        self.crawl_stop_button.Bind(wx.EVT_BUTTON, self.click_stop_button)
+        self.crawl_stop_button.Disable()
 
         self.layout = wx.BoxSizer(wx.VERTICAL)
         self.layout.Add(self.title_text, flag=wx.ALIGN_CENTER)
@@ -157,8 +163,8 @@ class CrawlOptionPanel(wx.Panel):
                         flag=wx.ALIGN_CENTER | wx.TOP, border=15)
         self.layout.Add(self.option_layout,
                         flag=wx.ALIGN_CENTER | wx.TOP | wx.BOTTOM, border=40)
-        self.layout.Add(self.crawl_button,
-                        flag=wx.ALIGN_RIGHT)
+        self.layout.Add(self.crawl_start_button, flag=wx.ALIGN_RIGHT)
+        self.layout.Add(self.crawl_stop_button, flag=wx.ALIGN_RIGHT)
 
         self.SetSizer(self.layout)
 
@@ -215,6 +221,7 @@ class CrawlOptionPanel(wx.Panel):
 
     def click_crawl_button(self, event):
         """
+        ---------- 廃止 -----------
         クロール制御ボタン
         """
         # 開始処理
@@ -260,11 +267,21 @@ class CrawlOptionPanel(wx.Panel):
         )
         res = dialog.ShowModal()
         if res == wx.ID_YES:
-            # 開始前にクロール中止フラグを初期化
-            # Do: DB初期化確認 
-            # Do: 開始ボタン無効化
+            if self.confirm_selected_categories() is None:
+                # カテゴリ未選択によりクロール中止
+                return
+            elif self.confirm_initialization() is None:
+                # 初期化キャンセルによりクロール中止
+                return
+            else:
+                # クロール開始
+                self.crawl_start_button.Disable()
+                self.crawl_stop_button.Enable()
+                # TODO: ScrapeThread 開始
+
         elif res == wx.ID_NO:
-            pass
+            # 処理なし
+            return
 
     def click_stop_button(self, event):
         """
@@ -277,13 +294,12 @@ class CrawlOptionPanel(wx.Panel):
         )
         res = dialog.ShowModal()
         if res == wx.ID_YES:
-            # Do: 停止ボタン無効化
             print("------ canceling -------")
-            # Do: ScrapeThread停止処理
-            # Do: 開始ボタン有効化
-            
-            self.crawl_button.Enable()
+            # TODO: ScrapeThread停止処理
+            self.crawl_start_button.Enable()
+            self.crawl_stop_button.Disable()
 
+            self.crawl_start_button.Enable()
 
     def crawl_command(self):
         """
@@ -326,6 +342,17 @@ class CrawlOptionPanel(wx.Panel):
                 break
             print(line, end="")
 
+    def confirm_selected_categories(self):
+        """
+        カテゴリ選択の確認
+        一つも選択されていない場合はクロール中止(Noneを返す)
+        """
+        if len(self.category_chkbox.GetCheckedStrings()) == 0:
+            print("No categories are selected")
+            return
+        else:
+            return True
+
     def confirm_initialization(self):
         """
         DB初期化の確認
@@ -334,14 +361,15 @@ class CrawlOptionPanel(wx.Panel):
         if self.init_DB_chkbox.IsChecked():
             dialog = wx.MessageDialog(
                 None, 'Initialize Database?',
-                style=wx.YES_NO | wx.ICON_INFORMATION
+                style=wx.YES_NO
             )
             res = dialog.ShowModal()
             if res == wx.ID_NO:
                 print("canceled crawling")
                 return
             elif res == wx.ID_YES:
-                return " -a init_db=1"
+                return True
+                # return " -a init_db=1"
         else:
             return ""
 
@@ -381,11 +409,12 @@ class ScrapeThread(Thread):
     """
     Scraping thread
     """
+
     def __init__(self, selected_cat, init_db, early_terminate):
         Thread.__init__()
         self.want_abort = 0
         # 取得対象カテゴリ(リスト)
-        self.selected_cat = selected_cat
+        self.category = " ".join(selected_cat)
         # DB初期化フラグ
         self.init_db = init_db
         # 早期終了フラグ(取得済みアイテムヒット時)
@@ -412,4 +441,7 @@ class ScrapeThread(Thread):
         """
         クロール開始
         """
-        pass
+        # scrapyに渡すコマンドを作成
+        cat_cmd = " -a category=" + self.category
+        if self.init_db:
+            pass
