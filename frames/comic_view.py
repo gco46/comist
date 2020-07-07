@@ -35,18 +35,18 @@ class ComicViewFrame(wx.Frame):
         # 要調整
         self.layout = wx.BoxSizer(wx.HORIZONTAL)
         left_layout = wx.BoxSizer(wx.VERTICAL)
-        left_layout.Add(self.info_layout, flag=wx.ALIGN_CENTER | wx.EXPAND)
+        left_layout.Add(self.info_layout, flag=wx.ALIGN_CENTER)
         left_layout.Add(self.radio_box, flag=wx.ALIGN_CENTER |
                         wx.TOP | wx.BOTTOM, border=20)
         left_layout.Add(self.cont_layout, flag=wx.ALIGN_CENTER |
                         wx.TOP | wx.BOTTOM, border=20)
         left_layout.Add(self.button_layout,
-                        flag=wx.EXPAND | wx.ALIGN_BOTTOM | wx.ALL,
+                        flag=wx.ALL,
                         border=20
                         )
 
         self.layout.Add(left_layout, proportion=1, flag=wx.EXPAND)
-        self.layout.Add(self.comic_img, proportion=1, flag=wx.ALIGN_RIGHT)
+        self.layout.Add(self.comic_img, proportion=1)
 
         self.SetSizer(self.layout)
         self.Centre()
