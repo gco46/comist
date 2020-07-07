@@ -147,6 +147,8 @@ class ComicViewFrame(wx.Frame):
         self.image_list = list(entry_path.glob("*.jpg"))
         if len(self.image_list) == 0:
             self.image_list = list(entry_path.glob("*.png"))
+        # 画像をソート
+        self.image_list.sort()
         self.comic_idx = 0
         self.idx_max = len(self.image_list) - 1
         self.idx_min = 0

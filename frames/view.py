@@ -419,12 +419,17 @@ class EntryListPanel(wx.Panel):
         cat_text.SetLabel(category)
 
     def update_thumbnail_and_title(self, idx):
+        """
+        漫画のサムネイルとタイトルを更新する
+        空白の欄は'no image'を使用する
+        """
         for i in range(self.n_item_per_page):
             # タイトル設定処理
             try:
                 title = self.s_result[idx * self.n_item_per_page + i]["title"]
-            except TypeError:
-                # 端数のエントリはno image, titleにする
+            except (TypeError, IndexError):
+                # 端数のエントリはno imageにする(TypeError)
+                # 検索結果0件の場合はすべてno imageにする(IndexError)
                 img = wx.Image(str(self.no_image_path))
                 img = img.Scale(self.img_w, self.img_h, wx.IMAGE_QUALITY_HIGH)
                 bitmap = img.ConvertToBitmap()
@@ -446,6 +451,8 @@ class EntryListPanel(wx.Panel):
                 img_pathes = list(comic_path.glob("*.png"))
                 if len(img_pathes) == 0:
                     continue
+            # 画像をソートし、先頭ページをサムネイルに使用する
+            img_pathes.sort()
             # 先頭ページをサムネイル用画像に選択
             tmp_img = wx.Image(str(img_pathes[0]))
             tmp_img = tmp_img.Scale(
