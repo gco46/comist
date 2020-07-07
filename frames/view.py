@@ -17,6 +17,16 @@ class ViewFrame(wx.Frame):
         # DB close処理を関連付け
         self.Bind(wx.EVT_CLOSE, self._close_DB)
         self._open_DB()
+        if len(self.col_list) == 0:
+            # 未スクレイピングの場合は終了
+            # TODO: my collection機能追加
+            dialog = wx.MessageDialog(
+                None, 'There are no collections. Scraping first.',
+                style=wx.OK
+            )
+            res = dialog.ShowModal()
+            self.Destroy()
+            return
         self.collection_panel = CollectionPanel(self, wx.ID_ANY)
         self.search_panel = SearchPanel(self, wx.ID_ANY)
         self.entry_panel = EntryListPanel(self, wx.ID_ANY)
