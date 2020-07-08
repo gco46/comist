@@ -405,11 +405,18 @@ class ScrapeThread(Thread):
         """
         # 非同期処理でスクレイピングを実行
         # TODO: Windows用の中断処理追加
-        # cmdまでkillできるようにするためにexecをつけて実行する
-        self.proc = subprocess.Popen(
-            "exec " + cmd, cwd="cc_scrapy/",
-            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-            shell=True)
+        if os.name == "posix":          # UNIX系処理
+            # cmdまでkillできるようにするためにexecをつけて実行する
+            self.proc = subprocess.Popen(
+                "exec " + cmd, cwd="cc_scrapy/",
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                shell=True)
+        elif os.name == "nt":           # windows処理
+            self.proc = subprocess.Popen(
+                cmd, cwd="cc_scrapy/",
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        else:
+            raise ValueError
         # 標準出力を一行ずつ取得し、リアルタイム表示するためにループを回す
         while True:
             line = self.proc.stdout.readline()
