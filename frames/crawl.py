@@ -257,14 +257,14 @@ class CrawlOptionPanel(wx.Panel):
         res = dialog.ShowModal()
         if res == wx.ID_YES:
             print("------ canceling -------")
-            # TODO: ScrapeProcess停止処理
             self.scrape.stop()
-            self.scrape.join()
+            self.scrape.join()      # thread処理停止まで待機
             print("------ canceled -------")
-            self.crawl_start_button.Enable()
+            # クロール開始/停止ボタンを再設定
             self.crawl_stop_button.Disable()
-
             self.crawl_start_button.Enable()
+            # TODO: 整合性を保つため、最後にクロールしたアイテムをDBから削除
+            # TODO: 余力があればストレージからも削除
 
     def confirm_selected_categories(self):
         """
@@ -361,9 +361,15 @@ class ScrapeThread(Thread):
         wx.CallAfter(print, "")
 
     def stop(self):
+        """
+        thread停止要求
+        """
         self.want_stop = True
 
     def stopped(self):
+        """
+        thread停止要求取得
+        """
         return self.want_stop
 
     def execute_crawling(self):
@@ -398,7 +404,7 @@ class ScrapeThread(Thread):
         スクレイピングサブプロセスを実行
         """
         # 非同期処理でスクレイピングを実行
-        # TODO: Windows用の処理追加
+        # TODO: Windows用の中断処理追加
         # cmdまでkillできるようにするためにexecをつけて実行する
         self.proc = subprocess.Popen(
             "exec " + cmd, cwd="cc_scrapy/",
