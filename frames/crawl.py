@@ -1,9 +1,11 @@
 import wx
 import sys
 from pathlib import Path
+from pymongo import MongoClient
 import subprocess
 from threading import Thread
 import os
+import frames.const as c_
 
 
 class CrawlFrame(wx.Frame):
@@ -129,6 +131,7 @@ class CrawlOptionPanel(wx.Panel):
             "rezu-yuri": "レズ・百合",
         }
     }
+    image_path = c_.COMIC_PATH
 
     def __init__(self, parent):
         super().__init__(parent, wx.ID_ANY)
@@ -251,7 +254,7 @@ class CrawlOptionPanel(wx.Panel):
         """
         dialog = wx.MessageDialog(
             None,
-            'cancel crawling? There may be inconsistencies in the database and storage.',
+            'cancel crawling?',
             style=wx.YES_NO
         )
         res = dialog.ShowModal()
@@ -263,8 +266,31 @@ class CrawlOptionPanel(wx.Panel):
             # クロール開始/停止ボタンを再設定
             self.crawl_stop_button.Disable()
             self.crawl_start_button.Enable()
-            # TODO: 整合性を保つため、最後にクロールしたアイテムをDBから削除
+            self.remove_canceled_item_from_DB()
             # TODO: 余力があればストレージからも削除
+
+    def remove_canceled_item_from_DB(self):
+        """
+        ダウンロードを中断したアイテムをDBから削除する
+        """
+        # DB open
+        self.client = MongoClient('localhost', 27017)
+        self.db = self.client['ScrapedData']
+        col = self.GetParent().target_web_panel.radio_box.GetStringSelection()
+        # 最後にダウンロードされたitemを取得
+        # 日付順でソートした結果の先頭のみ取得
+        latest_item = self.db[col].find().sort([{"_id", -1}]).limit(1)
+        # アイテムはdict型であるため、listでキャスト後要素を取り出す
+        latest_item = list(latest_item)[0]
+        # ストレージに保存された画像の枚数を確認
+        comic_path = self.image_path / latest_item["comic_key"]
+        num_dl_images = len(list(comic_path.glob("*")))
+        if latest_item["num_images"] != num_dl_images:
+            # 最新アイテムがDL途中で中断された場合、DBから削除
+            self.db[col].remove({"comic_key": latest_item["comic_key"]})
+
+        # DB close
+        self.client.close()
 
     def confirm_selected_categories(self):
         """
