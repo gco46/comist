@@ -13,6 +13,11 @@ class CrawlFrame(wx.Frame):
         super().__init__(parent, wx.ID_ANY, 'crawl frame')
         # 画面を最大化
         self.Maximize()
+        # crawl状態フラグ
+        self.now_crawling = False
+        # DB open
+        self._open_DB()
+
         # CLOSEイベント
         self.Bind(wx.EVT_CLOSE, self.close_frame)
 
@@ -36,15 +41,28 @@ class CrawlFrame(wx.Frame):
         self.Centre()
         self.Show(True)
 
+    def _open_DB(self):
+        """
+        ローカルMongoDBに接続し、ScrapedDataを開く
+        """
+        self.client = MongoClient('localhost', 27017)
+        self.db = self.client['ScrapedData']
+
+    def _close_DB(self):
+        """
+        DBクローズ
+        """
+        self.client.close()
+
     def close_frame(self, event):
         """
         ウィンドウ閉じる処理
         TODO: crawl中はframeを閉じられないようにする
               (スレッド処理が生き残るため)
         """
-        btn_label = self.option_panel.crawl_start_button.GetLabel()
+        btn_label = self.option_panel.crawl_stop_button.GetLabel()
         # crawling中ならば, 先にSTOPするようにダイアログで表示する
-        if btn_label == "STOP":
+        if self.now_crawling:
             dialog = wx.MessageDialog(
                 None,
                 'If you want to quit, please press the stop button first.',
@@ -52,6 +70,7 @@ class CrawlFrame(wx.Frame):
             )
             dialog.ShowModal()
         else:
+            self._close_DB()
             self.Destroy()
 
 
@@ -237,6 +256,7 @@ class CrawlOptionPanel(wx.Panel):
                 return
             else:
                 # クロール開始
+                self.GetParent().now_crawling = True
                 self.crawl_start_button.Disable()
                 self.crawl_stop_button.Enable()
                 selected_cat = self.category_chkbox.GetCheckedStrings()
@@ -259,14 +279,19 @@ class CrawlOptionPanel(wx.Panel):
         )
         res = dialog.ShowModal()
         if res == wx.ID_YES:
+            # +++ クロール停止処理 +++
+            #   予期せぬ操作を防止するため、先にクロール停止ボタンを無効化
+            self.crawl_stop_button.Disable()
             print("------ canceling -------")
             self.scrape.stop()
             self.scrape.join()      # thread処理停止まで待機
             print("------ canceled -------")
-            # クロール開始/停止ボタンを再設定
-            self.crawl_stop_button.Disable()
+
+            # +++ クロール停止完了後処理 +++
             self.crawl_start_button.Enable()
             self.remove_canceled_item_from_DB()
+            self.GetParent().now_crawling = False
+
             # TODO: 余力があればストレージからも削除
 
     def remove_canceled_item_from_DB(self):
