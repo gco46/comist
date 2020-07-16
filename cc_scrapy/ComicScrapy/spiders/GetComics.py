@@ -179,6 +179,8 @@ class GetComicsSpider(scrapy.Spider):
         # extract_first()で最初にマッチした要素を取得
         caption = response.css(Css.to_caption).extract_first()
         author_title = re.search(Ptn.author_title, caption).group(0)
+        # 全角のコロンを半角へ置換
+        author_title = author_title.replace("：", ":")
         # 【(作者):(タイトル)】の文字列から作者とタイトルを抽出
         # 【】を除く文字列を抜き出し、:(コロン)を区切り文字として抽出
         if author_title.count(":") == 1:

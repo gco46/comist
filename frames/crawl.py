@@ -1,9 +1,11 @@
 import wx
 import sys
 from pathlib import Path
+from pymongo import MongoClient
 import subprocess
-import threading
+from threading import Thread
 import os
+import frames.const as c_
 
 
 class CrawlFrame(wx.Frame):
@@ -11,6 +13,11 @@ class CrawlFrame(wx.Frame):
         super().__init__(parent, wx.ID_ANY, 'crawl frame')
         # 画面を最大化
         self.Maximize()
+        # crawl状態フラグ
+        self.now_crawling = False
+        # DB open
+        self._open_DB()
+
         # CLOSEイベント
         self.Bind(wx.EVT_CLOSE, self.close_frame)
 
@@ -34,14 +41,28 @@ class CrawlFrame(wx.Frame):
         self.Centre()
         self.Show(True)
 
+    def _open_DB(self):
+        """
+        ローカルMongoDBに接続し、ScrapedDataを開く
+        """
+        self.client = MongoClient('localhost', 27017)
+        self.db = self.client['ScrapedData']
+
+    def _close_DB(self):
+        """
+        DBクローズ
+        """
+        self.client.close()
+
     def close_frame(self, event):
         """
-        crawl中はframeを閉じられないようにする
-        (スレッド処理が生き残るため)
+        ウィンドウ閉じる処理
+        TODO: crawl中はframeを閉じられないようにする
+              (スレッド処理が生き残るため)
         """
-        btn_label = self.option_panel.crawl_button.GetLabel()
+        btn_label = self.option_panel.crawl_stop_button.GetLabel()
         # crawling中ならば, 先にSTOPするようにダイアログで表示する
-        if btn_label == "STOP":
+        if self.now_crawling:
             dialog = wx.MessageDialog(
                 None,
                 'If you want to quit, please press the stop button first.',
@@ -49,6 +70,7 @@ class CrawlFrame(wx.Frame):
             )
             dialog.ShowModal()
         else:
+            self._close_DB()
             self.Destroy()
 
 
@@ -128,6 +150,7 @@ class CrawlOptionPanel(wx.Panel):
             "rezu-yuri": "レズ・百合",
         }
     }
+    image_path = c_.COMIC_PATH
 
     def __init__(self, parent):
         super().__init__(parent, wx.ID_ANY)
@@ -144,12 +167,14 @@ class CrawlOptionPanel(wx.Panel):
         # オプションチェックボックス
         self.set_option_chkbox()
 
-        # クロール中止フラグ
-        self.cancel_crawling = False
-
-        # クロール制御ボタン
-        self.crawl_button = wx.Button(self, wx.ID_ANY, 'START')
-        self.crawl_button.Bind(wx.EVT_BUTTON, self.click_crawl_button)
+        # クロール開始ボタン
+        self.crawl_start_button = wx.Button(self, wx.ID_ANY, 'START')
+        self.crawl_start_button.Bind(wx.EVT_BUTTON, self.click_start_button)
+        # クロール停止ボタン
+        # クロール中のみ有効のためボタン無効化
+        self.crawl_stop_button = wx.Button(self, wx.ID_ANY, 'STOP')
+        self.crawl_stop_button.Bind(wx.EVT_BUTTON, self.click_stop_button)
+        self.crawl_stop_button.Disable()
 
         self.layout = wx.BoxSizer(wx.VERTICAL)
         self.layout.Add(self.title_text, flag=wx.ALIGN_CENTER)
@@ -157,8 +182,8 @@ class CrawlOptionPanel(wx.Panel):
                         flag=wx.ALIGN_CENTER | wx.TOP, border=15)
         self.layout.Add(self.option_layout,
                         flag=wx.ALIGN_CENTER | wx.TOP | wx.BOTTOM, border=40)
-        self.layout.Add(self.crawl_button,
-                        flag=wx.ALIGN_RIGHT)
+        self.layout.Add(self.crawl_start_button, flag=wx.ALIGN_RIGHT)
+        self.layout.Add(self.crawl_stop_button, flag=wx.ALIGN_RIGHT)
 
         self.SetSizer(self.layout)
 
@@ -213,83 +238,95 @@ class CrawlOptionPanel(wx.Panel):
         )
         self.category_chkbox.SetFont(self.font)
 
-    def click_crawl_button(self, event):
+    def click_start_button(self, event):
         """
-        クロール制御ボタン
+        クロール開始ボタン
         """
-        # 開始処理
-        if self.crawl_button.GetLabel() == "START":
-            dialog = wx.MessageDialog(
-                None, 'start crawling?',
-                style=wx.YES_NO
-            )
-            res = dialog.ShowModal()
-            if res == wx.ID_YES:
-                # 開始前にクロール中止フラグを初期化
-                self.cancel_crawling = False
-                self.thread = threading.Thread(target=self.crawl_command)
-                self.thread.start()
-            elif res == wx.ID_NO:
-                pass
+        dialog = wx.MessageDialog(
+            None, 'start crawling?',
+            style=wx.YES_NO
+        )
+        res = dialog.ShowModal()
+        if res == wx.ID_YES:
+            if self.confirm_selected_categories() is None:
+                # カテゴリ未選択によりクロール中止
+                return
+            elif self.confirm_initialization() is None:
+                # 初期化キャンセルによりクロール中止
+                return
+            else:
+                # クロール開始
+                self.GetParent().now_crawling = True
+                self.crawl_start_button.Disable()
+                self.crawl_stop_button.Enable()
+                selected_cat = self.category_chkbox.GetCheckedStrings()
+                init_db = self.init_DB_chkbox.IsChecked()
+                early_term = self.end_crawl_chkbox.IsChecked()
+                self.scrape = ScrapeThread(selected_cat, init_db, early_term)
 
-        # 停止処理
-        elif self.crawl_button.GetLabel() == "STOP":
-            dialog = wx.MessageDialog(
-                None,
-                'cancel crawling? There may be inconsistencies in the database and storage.',
-                style=wx.YES_NO
-            )
-            res = dialog.ShowModal()
-            if res == wx.ID_YES:
-                # 停止処理中は要求を受けつけないために、ボタンを無効化
-                self.crawl_button.Disable()
-                print("------ canceling -------")
-                # クロール中止フラグをONにし、処理が完了するまで待機
-                self.cancel_crawling = True
-                self.crawl_button.Enable()
-
-        dialog.Destroy()
-
-    def crawl_command(self):
-        """
-        クロールコマンド実行処理
-        """
-        self.crawl_button.SetLabel("STOP")
-        print("------------------------")
-        print("---- start crawling ----")
-        print("------------------------")
-        print("")
-
-        self.execute_crawling()
-
-        print("------------------------")
-        print("----- end crawling -----")
-        print("------------------------")
-        print("")
-        self.crawl_button.SetLabel("START")
-
-    def execute_crawling(self):
-        selected = self.category_chkbox.GetCheckedStrings()
-        category = ",".join(selected)
-        # scrapyに渡すコマンドを作成
-        cat_cmd = " -a category=" + category
-        init_cmd = self.confirm_initialization()
-        end_cmd = self.confirm_early_terminate()
-        # DB初期化確認にてキャンセルされた場合、クロールを中止する
-        if init_cmd is None:
-            return
-        if len(selected) == 0:
-            print("no categories are checked")
+        elif res == wx.ID_NO:
+            # 処理なし
             return
 
-        cmd = "scrapy crawl GetComics" + cat_cmd + init_cmd + end_cmd
-        for line in self.get_lines(cmd):
-            # 停止ボタン押下時、サブプロセスを停止
-            if self.cancel_crawling:
-                print("------- canceled -------")
-                self.proc.terminate()
-                break
-            print(line, end="")
+    def click_stop_button(self, event):
+        """
+        クロール停止ボタン
+        """
+        dialog = wx.MessageDialog(
+            None,
+            'cancel crawling?',
+            style=wx.YES_NO
+        )
+        res = dialog.ShowModal()
+        if res == wx.ID_YES:
+            # +++ クロール停止処理 +++
+            #   予期せぬ操作を防止するため、先にクロール停止ボタンを無効化
+            self.crawl_stop_button.Disable()
+            print("------ canceling -------")
+            self.scrape.stop()
+            self.scrape.join()      # thread処理停止まで待機
+            print("------ canceled -------")
+
+            # +++ クロール停止完了後処理 +++
+            self.crawl_start_button.Enable()
+            self.remove_canceled_item_from_DB()
+            self.GetParent().now_crawling = False
+
+            # TODO: 余力があればストレージからも削除
+
+    def remove_canceled_item_from_DB(self):
+        """
+        ダウンロードを中断したアイテムをDBから削除する
+        """
+        # DB open
+        self.client = MongoClient('localhost', 27017)
+        self.db = self.client['ScrapedData']
+        col = self.GetParent().target_web_panel.radio_box.GetStringSelection()
+        # 最後にダウンロードされたitemを取得
+        # 日付順でソートした結果の先頭のみ取得
+        latest_item = self.db[col].find().sort([{"_id", -1}]).limit(1)
+        # アイテムはdict型であるため、listでキャスト後要素を取り出す
+        latest_item = list(latest_item)[0]
+        # ストレージに保存された画像の枚数を確認
+        comic_path = self.image_path / latest_item["comic_key"]
+        num_dl_images = len(list(comic_path.glob("*")))
+        if latest_item["num_images"] != num_dl_images:
+            # 最新アイテムがDL途中で中断された場合、DBから削除
+            self.db[col].remove({"comic_key": latest_item["comic_key"]})
+
+        # DB close
+        self.client.close()
+
+    def confirm_selected_categories(self):
+        """
+        カテゴリ選択の確認
+        一つも選択されていない場合はクロール中止(Noneを返す)
+        """
+        if len(self.category_chkbox.GetCheckedStrings()) == 0:
+            print("No categories are selected")
+            return
+        else:
+            return True
 
     def confirm_initialization(self):
         """
@@ -299,14 +336,14 @@ class CrawlOptionPanel(wx.Panel):
         if self.init_DB_chkbox.IsChecked():
             dialog = wx.MessageDialog(
                 None, 'Initialize Database?',
-                style=wx.YES_NO | wx.ICON_INFORMATION
+                style=wx.YES_NO
             )
             res = dialog.ShowModal()
             if res == wx.ID_NO:
                 print("canceled crawling")
                 return
             elif res == wx.ID_YES:
-                return " -a init_db=1"
+                return True
         else:
             return ""
 
@@ -327,6 +364,110 @@ class CrawlOptionPanel(wx.Panel):
         self.proc = subprocess.Popen(
             cmd, cwd="cc_scrapy/",
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        # 標準出力を一行ずつ取得し、リアルタイム表示するためにループを回す
+        while True:
+            line = self.proc.stdout.readline()
+            if line:
+                try:
+                    line = line.decode('utf-8')
+                except UnicodeDecodeError:
+                    continue
+                yield line
+
+            # 出力がなくなり、サブプロセス処理が完了したらbreak
+            if not line and self.proc.poll() is not None:
+                break
+
+
+class ScrapeThread(Thread):
+    """
+    Scraping thread
+    """
+
+    def __init__(self, selected_cat, init_db, early_terminate):
+        Thread.__init__(self)
+        self.want_stop = False
+        # 取得対象カテゴリ(リスト)
+        self.category = " ".join(selected_cat)
+        # DB初期化フラグ
+        self.init_db = init_db
+        # 早期終了フラグ(取得済みアイテムヒット時)
+        self.early_terminate = early_terminate
+        self.start()
+
+    def run(self):
+        """
+        thread実行
+        """
+        wx.CallAfter(print, "------------------------")
+        wx.CallAfter(print, "---- start crawling ----")
+        wx.CallAfter(print, "------------------------")
+        wx.CallAfter(print, "")
+
+        self.execute_crawling()
+
+        wx.CallAfter(print, "------------------------")
+        wx.CallAfter(print, "----- end crawling -----")
+        wx.CallAfter(print, "------------------------")
+        wx.CallAfter(print, "")
+
+    def stop(self):
+        """
+        thread停止要求
+        """
+        self.want_stop = True
+
+    def stopped(self):
+        """
+        thread停止要求取得
+        """
+        return self.want_stop
+
+    def execute_crawling(self):
+        """
+        クロール開始
+        """
+        # scrapyに渡すコマンドを作成
+        cat_cmd = " -a category=" + self.category
+
+        # DB初期化コマンド
+        if self.init_db:
+            init_cmd = " -a init_db=1"
+        else:
+            init_cmd = ""
+
+        # 早期終了コマンド
+        if self.early_terminate:
+            term_cmd = " -a end_crawl=1"
+        else:
+            term_cmd = ""
+
+        cmd = "scrapy crawl GetComics" + cat_cmd + init_cmd + term_cmd
+        for line in self.get_subprocess_output(cmd):
+            if self.stopped():
+                # スクレイピング中断処理
+                self.proc.kill()
+                return
+            wx.CallAfter(print, line, end="")
+
+    def get_subprocess_output(self, cmd):
+        """
+        スクレイピングサブプロセスを実行
+        """
+        # 非同期処理でスクレイピングを実行
+        # TODO: Windows用の中断処理追加
+        if os.name == "posix":          # UNIX系処理
+            # cmdまでkillできるようにするためにexecをつけて実行する
+            self.proc = subprocess.Popen(
+                "exec " + cmd, cwd="cc_scrapy/",
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                shell=True)
+        elif os.name == "nt":           # windows処理
+            self.proc = subprocess.Popen(
+                cmd, cwd="cc_scrapy/",
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        else:
+            raise ValueError
         # 標準出力を一行ずつ取得し、リアルタイム表示するためにループを回す
         while True:
             line = self.proc.stdout.readline()

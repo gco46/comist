@@ -35,18 +35,18 @@ class ComicViewFrame(wx.Frame):
         # 要調整
         self.layout = wx.BoxSizer(wx.HORIZONTAL)
         left_layout = wx.BoxSizer(wx.VERTICAL)
-        left_layout.Add(self.info_layout, flag=wx.ALIGN_CENTER | wx.EXPAND)
+        left_layout.Add(self.info_layout, flag=wx.ALIGN_CENTER)
         left_layout.Add(self.radio_box, flag=wx.ALIGN_CENTER |
                         wx.TOP | wx.BOTTOM, border=20)
         left_layout.Add(self.cont_layout, flag=wx.ALIGN_CENTER |
                         wx.TOP | wx.BOTTOM, border=20)
         left_layout.Add(self.button_layout,
-                        flag=wx.EXPAND | wx.ALIGN_BOTTOM | wx.ALL,
+                        flag=wx.ALL,
                         border=20
                         )
 
         self.layout.Add(left_layout, proportion=1, flag=wx.EXPAND)
-        self.layout.Add(self.comic_img, proportion=1, flag=wx.ALIGN_RIGHT)
+        self.layout.Add(self.comic_img, proportion=1)
 
         self.SetSizer(self.layout)
         self.Centre()
@@ -106,8 +106,12 @@ class ComicViewFrame(wx.Frame):
         """
         ページングボタンを初期化
         """
-        self.next_page = wx.Button(self, wx.ID_ANY, "=>", size=(400, 100))
-        self.prev_page = wx.Button(self, wx.ID_ANY, "<=", size=(400, 100))
+        font = wx.Font(20, wx.FONTFAMILY_DEFAULT,
+                       wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL)
+        self.next_page = wx.Button(self, wx.ID_ANY, "→", size=(400, 100))
+        self.next_page.SetFont(font)
+        self.prev_page = wx.Button(self, wx.ID_ANY, "←", size=(400, 100))
+        self.prev_page.SetFont(font)
         self.next_page.Bind(wx.EVT_BUTTON, self.draw_next_page)
         self.prev_page.Bind(wx.EVT_BUTTON, self.draw_prev_page)
 
@@ -143,6 +147,8 @@ class ComicViewFrame(wx.Frame):
         self.image_list = list(entry_path.glob("*.jpg"))
         if len(self.image_list) == 0:
             self.image_list = list(entry_path.glob("*.png"))
+        # 画像をソート
+        self.image_list.sort()
         self.comic_idx = 0
         self.idx_max = len(self.image_list) - 1
         self.idx_min = 0
