@@ -299,23 +299,24 @@ class CrawlOptionPanel(wx.Panel):
         ダウンロードを中断したアイテムをDBから削除する
         """
         # DB open
-        self.client = MongoClient('localhost', 27017)
-        self.db = self.client['ScrapedData']
         col = self.GetParent().target_web_panel.radio_box.GetStringSelection()
         # 最後にダウンロードされたitemを取得
         # 日付順でソートした結果の先頭のみ取得
-        latest_item = self.db[col].find().sort([{"_id", -1}]).limit(1)
-        # アイテムはdict型であるため、listでキャスト後要素を取り出す
-        latest_item = list(latest_item)[0]
+        latest_item = self.GetParent().db[col].find().sort([
+            {"_id", -1}]).limit(1)
+        try:
+            # アイテムはdict型であるため、listでキャスト後要素を取り出す
+            latest_item = list(latest_item)[0]
+        except IndexError:
+            # DBにアイテムがない場合は何もせず終了
+            return
         # ストレージに保存された画像の枚数を確認
         comic_path = self.image_path / latest_item["comic_key"]
         num_dl_images = len(list(comic_path.glob("*")))
         if latest_item["num_images"] != num_dl_images:
             # 最新アイテムがDL途中で中断された場合、DBから削除
-            self.db[col].remove({"comic_key": latest_item["comic_key"]})
-
-        # DB close
-        self.client.close()
+            self.GetParent().db[col].remove(
+                {"comic_key": latest_item["comic_key"]})
 
     def confirm_selected_categories(self):
         """
@@ -388,7 +389,7 @@ class ScrapeThread(Thread):
         Thread.__init__(self)
         self.want_stop = False
         # 取得対象カテゴリ(リスト)
-        self.category = " ".join(selected_cat)
+        self.category = ",".join(selected_cat)
         # DB初期化フラグ
         self.init_db = init_db
         # 早期終了フラグ(取得済みアイテムヒット時)
