@@ -134,10 +134,18 @@ class ComicViewFrame(wx.Frame):
 
         # 描画のためにBitmapオブジェクトに変換する必要あり
         image = wx.Image(str(self.image_list[0]))
+        if image.Width > image.Height:
+            # 1ページ目が横長だった場合は2ページ目のサイズに合わせて読み込み
+            tmp = wx.Image(str(self.image_list[1]))
+            width = tmp.Width
+            height = tmp.Height
+        else:
+            width = image.Width
+            height = image.Height
         image = image.Scale(image.Width, image.Height, wx.IMAGE_QUALITY_HIGH)
         bitmap = image.ConvertToBitmap()
         self.comic_img = wx.StaticBitmap(
-            self, wx.ID_ANY, bitmap, size=bitmap.GetSize())
+            self, wx.ID_ANY, bitmap, size=(width, height))
 
     def init_imglist_and_idxs(self):
         """
