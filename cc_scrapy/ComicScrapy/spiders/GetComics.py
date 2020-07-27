@@ -7,6 +7,7 @@ from ComicScrapy.items import ComicImageItem
 import urllib
 from pymongo import MongoClient
 import requests
+from requests.exceptions import MissingSchema
 import re
 from ComicScrapy.site_data import CssSelectors as Css
 from ComicScrapy.site_data import REpattern as Ptn
@@ -226,12 +227,24 @@ class GetComicsSpider(scrapy.Spider):
         """
         itemに追加する連作情報を取得する
         """
-        # ページ上部と下部で二重に連作情報が取得されるため、半分だけitemに追加
+        # 連作情報(url)を取得
         cont_list = response.css(Css.to_continuous).extract()
-        cont_list = cont_list[len(cont_list) // 2:]
+
+        try:
+            # ページ上部と株で二重に連作情報が取得された場合は、半分だけitemに追加
+            if cont_list.count(cont_list[0]) == 2:
+                cont_list = cont_list[len(cont_list) // 2:]
+        except IndexError:
+            # 連作がない場合は空リストを返して終了
+            return cont_list
+
         # リダイレクトしたURLを取得するために一度リクエストを送り、
         # 返ってきたURLを連作情報として返す
         for idx in range(len(cont_list)):
-            response_redirect = requests.get(cont_list[idx])
-            cont_list[idx] = response_redirect.url
+            try:
+                response_redirect = requests.get(cont_list[idx])
+                cont_list[idx] = response_redirect.url
+            except MissingSchema:
+                # URLフラグメントが使われている場合は現在のURLで置換する
+                cont_list[idx] = response.url
         return cont_list
