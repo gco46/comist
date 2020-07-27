@@ -9,6 +9,11 @@ class ComicViewFrame(wx.Frame):
     漫画選択後Frame
     """
     image_path = c_.COMIC_PATH
+    image_size = c_.IMAGE_SIZE
+    image_height = c_.IMAGE_HEIGHT
+    image_width = c_.IMAGE_WIDTH
+    # 画像サイズ超過の許容量
+    size_capacity = 15
 
     def __init__(self, parent, entry_info):
         super().__init__(parent, wx.ID_ANY)
@@ -150,32 +155,22 @@ class ComicViewFrame(wx.Frame):
         漫画の画像表示を初期化
         """
         self.init_imglist_and_idxs()
-
         # 描画のためにBitmapオブジェクトに変換する必要あり
         image = wx.Image(str(self.image_list[0]))
-        if image.Width > image.Height:
-            # 1ページ目が横長だった場合は2ページ目のサイズに合わせて読み込み
-            tmp = wx.Image(str(self.image_list[1]))
-            width = tmp.Width
-            height = tmp.Height
-        else:
-            width = image.Width
-            height = image.Height
-        image = image.Scale(image.Width, image.Height, wx.IMAGE_QUALITY_HIGH)
+        image = self.scale_bitmap_image(image)
         bitmap = image.ConvertToBitmap()
         self.comic_img = wx.StaticBitmap(
-            self, wx.ID_ANY, bitmap, size=(width, height))
+            self, wx.ID_ANY, bitmap, size=self.image_size)
 
     def init_imglist_and_idxs(self):
         """
         漫画画像のリストとページングに使用するインデックスを初期化
         """
         entry_path = self.image_path / self.entry_info["comic_key"]
-        self.image_list = list(entry_path.glob("*.jpg"))
-        if len(self.image_list) == 0:
-            self.image_list = list(entry_path.glob("*.png"))
+        self.image_list = list(entry_path.glob("*"))
+        self.image_list = list(map(str, self.image_list))
         # 画像をソート
-        self.image_list.sort()
+        self.image_list.sort(key=c_.natural_keys)
         self.comic_idx = 0
         self.idx_max = len(self.image_list) - 1
         self.idx_min = 0
@@ -193,6 +188,25 @@ class ComicViewFrame(wx.Frame):
         )
         self.radio_box.Bind(wx.EVT_RADIOBOX, self.register_rate)
         self.radio_box.SetStringSelection(str(rate))
+
+    def scale_bitmap_image(self, img_obj):
+        """
+        標準サイズより大きい画像を縮小する
+        input
+          img_obj: wx.Image object
+
+        output
+          image: wx.Image object, scale処理後
+        """
+        if img_obj.Width > self.image_width + self.size_capacity and \
+                img_obj.Height > self.image_height + self.size_capacity:
+            scale_width = self.image_width
+            scale_height = self.image_height
+        else:
+            scale_width = img_obj.Width
+            scale_height = img_obj.Height
+        image = img_obj.Scale(scale_width, scale_height, wx.IMAGE_QUALITY_HIGH)
+        return(image)
 
     def register_rate(self, event):
         """
@@ -310,10 +324,10 @@ class ComicViewFrame(wx.Frame):
         """
         title = self.entry_info["title"]
         author = self.entry_info["author"]
-        category = self.entry_info["category"]
+        comic_key = self.entry_info["comic_key"]
         self.title_text.SetLabel(title)
         self.author_text.SetLabel(author)
-        self.category_text.SetLabel(category)
+        self.category_text.SetLabel(comic_key)
 
     def update_comic_img(self):
         """
@@ -321,7 +335,8 @@ class ComicViewFrame(wx.Frame):
         """
         self.init_imglist_and_idxs()
         image = wx.Image(str(self.image_list[0]))
-        image = image.Scale(image.Width, image.Height, wx.IMAGE_QUALITY_HIGH)
+        image = image.Scale(
+            self.image_width, self.image_height, wx.IMAGE_QUALITY_HIGH)
         bitmap = image.ConvertToBitmap()
         self.comic_img.SetBitmap(bitmap)
 
@@ -424,6 +439,7 @@ class ComicViewFrame(wx.Frame):
         window_list = self.layout.GetChildren()
         comic_window = window_list[1].GetWindow()
         image = wx.Image(str(self.image_list[self.comic_idx]))
+        image = self.scale_bitmap_image(image)
         bitmap = image.ConvertToBitmap()
         comic_window.SetBitmap(bitmap)
         # 再描画時に画像がずれるので、Layout()をコール
@@ -442,6 +458,7 @@ class ComicViewFrame(wx.Frame):
         window_list = self.layout.GetChildren()
         comic_window = window_list[1].GetWindow()
         image = wx.Image(str(self.image_list[self.comic_idx]))
+        image = self.scale_bitmap_image(image)
         bitmap = image.ConvertToBitmap()
         comic_window.SetBitmap(bitmap)
         # 再描画時に画像がずれるので、Layout()をコール
