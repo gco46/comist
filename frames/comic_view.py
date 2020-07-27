@@ -31,6 +31,9 @@ class ComicViewFrame(wx.Frame):
         # 画像表示
         self.init_comic_img()
 
+        # キーイベントの紐付け
+        self.Bind(wx.EVT_CHAR_HOOK, self.on_key)
+
         # 左側に操作パネル、右側に画像を配置
         # 要調整
         self.layout = wx.BoxSizer(wx.HORIZONTAL)
@@ -67,6 +70,21 @@ class ComicViewFrame(wx.Frame):
         self.GetParent().update_entry_list(search_result, n_page)
         # 画面を閉じる
         self.Destroy()
+
+    def on_key(self, event):
+        """
+        キーイベント
+        左右の矢印キーが押されたときにページ送り処理をする
+        """
+        code = event.GetKeyCode()
+        if code == wx.WXK_RIGHT:
+            # ページ終端でなければ次ページへ
+            if self.next_page_btn_is_enabled:
+                self.draw_next_page()
+        elif code == wx.WXK_LEFT:
+            # ページ終端でなければ前ページへ
+            if self.prev_page_btn_is_enabled:
+                self.draw_prev_page()
 
     def init_info_text(self):
         """
@@ -112,11 +130,12 @@ class ComicViewFrame(wx.Frame):
         self.next_page.SetFont(font)
         self.prev_page = wx.Button(self, wx.ID_ANY, "←", size=(400, 100))
         self.prev_page.SetFont(font)
-        self.next_page.Bind(wx.EVT_BUTTON, self.draw_next_page)
-        self.prev_page.Bind(wx.EVT_BUTTON, self.draw_prev_page)
+        self.next_page.Bind(wx.EVT_BUTTON, self.click_next_page_btn)
+        self.prev_page.Bind(wx.EVT_BUTTON, self.click_prev_page_btn)
 
-        # 最初に前ページボタンを無効化
-        self.prev_page.Disable()
+        # 最初に前ページボタンのみ無効化
+        self.enable_page_btn("next")
+        self.disable_page_btn("prev")
 
         self.button_layout = wx.BoxSizer(wx.HORIZONTAL)
         self.button_layout.Add(
@@ -345,6 +364,34 @@ class ComicViewFrame(wx.Frame):
         elif cont_work.index(entry_url) + 1 == len(cont_work):
             self.next_btn.Disable()
 
+    def enable_page_btn(self, direction):
+        """
+        ページ送り/戻りボタンの有効化
+        directionで送り/戻りを指定
+        """
+        assert direction in ["next", "prev"]
+
+        if direction == "prev":
+            self.prev_page.Enable()
+            self.prev_page_btn_is_enabled = True
+        else:
+            self.next_page.Enable()
+            self.next_page_btn_is_enabled = True
+
+    def disable_page_btn(self, direction):
+        """
+        ページ送り/戻りボタンの無効化
+        directionで送り/戻りを指定
+        """
+        assert direction in ["next", "prev"]
+
+        if direction == "prev":
+            self.prev_page.Disable()
+            self.prev_page_btn_is_enabled = False
+        else:
+            self.next_page.Disable()
+            self.next_page_btn_is_enabled = False
+
     def extract_comic_key(self, url):
         """
         urlからcomic_keyを抽出
@@ -352,16 +399,28 @@ class ComicViewFrame(wx.Frame):
         tmp = url.split("/")
         return "/".join(tmp[-2:])
 
-    def draw_next_page(self, event):
+    def click_next_page_btn(self, event):
         """
-        ページ送り試作
+        ページ送りボタン
+        """
+        self.draw_next_page()
+
+    def click_prev_page_btn(self, event):
+        """
+        ページ戻しボタン
+        """
+        self.draw_prev_page()
+
+    def draw_next_page(self):
+        """
+        ページ送り処理
         """
         self.comic_idx += 1
         # 1ページ進んだため　前ページボタンは有効化
-        self.prev_page.Enable()
+        self.enable_page_btn("prev")
         # ページ終端なら次ページボタンを無効化
         if self.comic_idx >= self.idx_max:
-            self.next_page.Disable()
+            self.disable_page_btn("next")
         window_list = self.layout.GetChildren()
         comic_window = window_list[1].GetWindow()
         image = wx.Image(str(self.image_list[self.comic_idx]))
@@ -370,16 +429,16 @@ class ComicViewFrame(wx.Frame):
         # 再描画時に画像がずれるので、Layout()をコール
         self.Layout()
 
-    def draw_prev_page(self, event):
+    def draw_prev_page(self):
         """
-        ページ戻し試作
+        ページ戻し処理
         """
         self.comic_idx -= 1
         # 1ページ戻ったため　次ページボタンは有効化
-        self.next_page.Enable()
+        self.enable_page_btn("next")
         # ページ終端なら前ページボタンを無効化
         if self.comic_idx == self.idx_min:
-            self.prev_page.Disable()
+            self.disable_page_btn("prev")
         window_list = self.layout.GetChildren()
         comic_window = window_list[1].GetWindow()
         image = wx.Image(str(self.image_list[self.comic_idx]))
