@@ -175,6 +175,8 @@ class CrawlOptionPanel(wx.Panel):
         self.crawl_stop_button = wx.Button(self, wx.ID_ANY, 'STOP')
         self.crawl_stop_button.Bind(wx.EVT_BUTTON, self.click_stop_button)
         self.crawl_stop_button.Disable()
+        # クロール完了通知と後処理の紐付け
+        self.Bind(c_.EVT_CRAWL_CMP, self.crawl_postprocess)
 
         self.layout = wx.BoxSizer(wx.VERTICAL)
         self.layout.Add(self.title_text, flag=wx.ALIGN_CENTER)
@@ -255,14 +257,18 @@ class CrawlOptionPanel(wx.Panel):
                 # 初期化キャンセルによりクロール中止
                 return
             else:
-                # クロール開始
+                # クロール開始前処理
                 self.GetParent().now_crawling = True
                 self.crawl_start_button.Disable()
                 self.crawl_stop_button.Enable()
+                # threadに渡す引数準備
                 selected_cat = self.category_chkbox.GetCheckedStrings()
                 init_db = self.init_DB_chkbox.IsChecked()
                 early_term = self.end_crawl_chkbox.IsChecked()
-                self.scrape = ScrapeThread(selected_cat, init_db, early_term)
+                # クロール処理開始
+                self.scrape = ScrapeThread(
+                    selected_cat, init_db, early_term, self
+                )
 
         elif res == wx.ID_NO:
             # 処理なし
@@ -279,20 +285,30 @@ class CrawlOptionPanel(wx.Panel):
         )
         res = dialog.ShowModal()
         if res == wx.ID_YES:
-            # +++ クロール停止処理 +++
-            #   予期せぬ操作を防止するため、先にクロール停止ボタンを無効化
+            # クロール停止処理
+            # 予期せぬ操作を防止するため、先にクロール停止ボタンを無効化
             self.crawl_stop_button.Disable()
             print("------ canceling -------")
             self.scrape.stop()
             self.scrape.join()      # thread処理停止まで待機
             print("------ canceled -------")
 
-            # +++ クロール停止完了後処理 +++
+            # クロール停止完了後処理
+            # DL中断されたアイテムはDBから削除する
             self.crawl_start_button.Enable()
             self.remove_canceled_item_from_DB()
             self.GetParent().now_crawling = False
 
             # TODO: 余力があればストレージからも削除
+
+    def crawl_postprocess(self, event):
+        """
+        クロール完了後処理
+        フラグ管理とボタンの有効・無効化
+        """
+        self.GetParent().now_crawling = False
+        self.crawl_start_button.Enable()
+        self.crawl_stop_button.Disable()
 
     def remove_canceled_item_from_DB(self):
         """
@@ -357,35 +373,13 @@ class CrawlOptionPanel(wx.Panel):
         else:
             return ""
 
-    def get_lines(self, cmd):
-        """
-        コマンド実行後、標準出力を一行ずつ取得
-        """
-        # 非同期処理でスクレイピングを実行
-        self.proc = subprocess.Popen(
-            cmd, cwd="cc_scrapy/",
-            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        # 標準出力を一行ずつ取得し、リアルタイム表示するためにループを回す
-        while True:
-            line = self.proc.stdout.readline()
-            if line:
-                try:
-                    line = line.decode('utf-8')
-                except UnicodeDecodeError:
-                    continue
-                yield line
-
-            # 出力がなくなり、サブプロセス処理が完了したらbreak
-            if not line and self.proc.poll() is not None:
-                break
-
 
 class ScrapeThread(Thread):
     """
     Scraping thread
     """
 
-    def __init__(self, selected_cat, init_db, early_terminate):
+    def __init__(self, selected_cat, init_db, early_terminate, option_panel):
         Thread.__init__(self)
         self.want_stop = False
         # 取得対象カテゴリ(リスト)
@@ -394,6 +388,8 @@ class ScrapeThread(Thread):
         self.init_db = init_db
         # 早期終了フラグ(取得済みアイテムヒット時)
         self.early_terminate = early_terminate
+        # 呼び出し元のcrawl frame
+        self.option_panel = option_panel
         self.start()
 
     def run(self):
@@ -450,6 +446,10 @@ class ScrapeThread(Thread):
                 self.proc.kill()
                 return
             wx.CallAfter(print, line, end="")
+
+        # クロール完了通知をcrawl option panelに送る
+        evt = c_.CrawlCompletedEvt()
+        wx.PostEvent(self.option_panel, evt)
 
     def get_subprocess_output(self, cmd):
         """
