@@ -86,8 +86,8 @@ class EntryListPanel(wx.Panel):
     n_item_per_page = grid_row * grid_col
     image_path = c_.COMIC_PATH
     no_image_path = c_.NO_IMAGE_PATH
-    img_w = 180
-    img_h = 260
+    img_w = c_.SUMB_WIDTH
+    img_h = c_.SUMB_HEIGHT
     hdlr = "self.click_comic_"
 
     def __init__(self, parent, id):
@@ -455,12 +455,17 @@ class EntryListPanel(wx.Panel):
             comic_key = self.s_result[idx *
                                       self.n_item_per_page + i]["comic_key"]
             comic_path = self.image_path / comic_key
-            # jpgがなければpngで試す、それでもなければスキップ
-            img_pathes = list(comic_path.glob("*.jpg"))
-            if len(img_pathes) == 0:
-                img_pathes = list(comic_path.glob("*.png"))
-                if len(img_pathes) == 0:
-                    continue
+
+            # ファイル数が0ならばスキップ
+            tmp = list(comic_path.glob("*"))
+            if len(tmp) == 0:
+                continue
+            else:
+                # ファイルがあれば拡張子を取得
+                tmp_path = tmp[0]
+                suffix = tmp_path.suffix
+
+            img_pathes = list(comic_path.glob("*" + suffix))
             # 画像をソートし、先頭ページをサムネイルに使用する
             img_pathes.sort()
             # 先頭ページをサムネイル用画像に選択
