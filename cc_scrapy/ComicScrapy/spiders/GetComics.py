@@ -67,10 +67,7 @@ class GetComicsSpider(scrapy.Spider):
         # 機能確認では指定のエントリーのみクロールする
         if self.test_crawl:
             self.start_urls.append(
-                urllib.parse.urljoin(self.base_url, "eromanga-night/68563")
-            )
-            self.start_urls.append(
-                urllib.parse.urljoin(self.base_url, "kinshinsoukan/1992")
+                urllib.parse.urljoin(self.base_url, "ol-sister/166223")
             )
             return
         # category引数指定があった場合はリスト化
