@@ -95,7 +95,7 @@ class EntryListPanel(wx.Panel):
         # 変数初期化
         self.init_paging_attributes()
         # Ctrl objectを初期化して配置
-        self.set_panel_title('Entries')
+        self.init_panel_title('Entries')
         self.init_search_layout()
         self.init_thumbnails()
         self.init_paging_button()
@@ -115,7 +115,7 @@ class EntryListPanel(wx.Panel):
                         flag=wx.ALIGN_CENTER | wx.TOP, border=5)
         self.SetSizer(self.layout)
 
-    def set_panel_title(self, title):
+    def init_panel_title(self, title):
         """
         パネル上部のタイトル設定
         """
@@ -506,34 +506,39 @@ class SearchPanel(wx.Panel):
     def __init__(self, parent, id):
         super().__init__(parent, id, style=wx.BORDER_SUNKEN)
 
-        self.set_panel_title('Search')
+        self.init_panel_title('Search')
         # 共通使用するフォント
         self.font = wx.Font(
             18, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL,
             wx.FONTWEIGHT_NORMAL
         )
         # レートを選択する為のlayout作成
-        self.set_rate_cmbbtn()
+        self.init_rate_cmbbtn()
 
         # カテゴリを選択するlayout作成
-        self.set_categories_rdbtn()
+        self.init_categories_rdbtn()
+
+        # フリーワード検索のlayout作成
+        self.init_freeword_box()
 
         # 検索ボタン
         self.search_button = wx.Button(self, wx.ID_ANY, 'SEARCH')
         self.search_button.Bind(wx.EVT_BUTTON, self.click_search)
 
         self.layout = wx.BoxSizer(wx.VERTICAL)
-        self.layout.Add(self.title_text, flag=wx.ALIGN_CENTER)
+        self.layout.Add(self.title_text, flag=wx.EXPAND | wx.BOTTOM, border=15)
         self.layout.Add(self.rate_layout,
-                        flag=wx.ALIGN_CENTER | wx.TOP, border=15)
+                        flag=wx.EXPAND | wx.LEFT, border=150)
         self.layout.Add(self.category_rdbox,
-                        flag=wx.ALIGN_CENTER | wx.TOP, border=15)
+                        flag=wx.EXPAND | wx.RIGHT | wx.LEFT, border=50)
+        self.layout.Add(self.freeword_layout,
+                        flag=wx.EXPAND | wx.RIGHT | wx.LEFT | wx.TOP, border=30)
         self.layout.Add(self.search_button,
-                        flag=wx.ALIGN_RIGHT)
+                        flag=wx.ALIGN_RIGHT | wx.TOP, border=30)
 
         self.SetSizer(self.layout)
 
-    def set_panel_title(self, title):
+    def init_panel_title(self, title):
         """
         パネル上部のタイトル設定
         """
@@ -546,7 +551,7 @@ class SearchPanel(wx.Panel):
         )
         self.title_text.SetFont(font_Title)
 
-    def set_rate_cmbbtn(self):
+    def init_rate_cmbbtn(self):
         """
         レート検索用のコンボボックスを設定
         """
@@ -571,7 +576,7 @@ class SearchPanel(wx.Panel):
         self.rate_layout.Add(self.operator_cmbbox, flag=wx.RIGHT, border=5)
         self.rate_layout.Add(self.rate_cmbbox, flag=wx.RIGHT, border=5)
 
-    def set_categories_rdbtn(self):
+    def init_categories_rdbtn(self):
         """
         カテゴリ選択のラジオボタンを設定
         """
@@ -585,6 +590,21 @@ class SearchPanel(wx.Panel):
             style=wx.RA_VERTICAL
         )
         self.category_rdbox.SetFont(self.font)
+
+    def init_freeword_box(self):
+        self.freeword_layout = wx.BoxSizer(wx.VERTICAL)
+
+        freeword_text = wx.StaticText(
+            self, wx.ID_ANY, "free word:")
+        font = wx.Font(
+            13, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL,
+            wx.FONTWEIGHT_NORMAL
+        )
+        freeword_text.SetFont(font)
+        self.freeword_box = wx.TextCtrl(self, wx.ID_ANY)
+
+        self.freeword_layout.Add(freeword_text)
+        self.freeword_layout.Add(self.freeword_box, flag=wx.EXPAND)
 
     def reset_operator_cmbbox(self, event):
         """
@@ -657,7 +677,7 @@ class CollectionPanel(wx.Panel):
     def __init__(self, parent, id):
         super().__init__(parent, id, style=wx.BORDER_SUNKEN)
 
-        self.set_panel_title('Collections')
+        self.init_panel_title('Collections')
         self.init_radio_buttons()
         self.init_selected_col()
 
@@ -667,7 +687,7 @@ class CollectionPanel(wx.Panel):
 
         self.SetSizer(self.layout)
 
-    def set_panel_title(self, title):
+    def init_panel_title(self, title):
         """
         パネル上部のタイトル設定
         """
