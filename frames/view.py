@@ -623,9 +623,12 @@ class SearchPanel(wx.Panel):
         category_q_idx = self.category_rdbox.GetSelection()
         selected = self.GetParent().collection_panel.get_selected_col()
         category_q = self.category_dict[selected][category_q_idx]
+        # フリーワードのクエリを取得
+        freeword_q = self.freeword_box.GetValue()
 
         # 取得した選択状態からクエリ作成、DB検索
-        self.query = self.make_query(rate_q, operator_q, category_q)
+        self.query = self.make_query(
+            rate_q, operator_q, category_q, freeword_q)
         # rateが選択されていない場合は終了
         if self.query is None:
             return
@@ -644,12 +647,26 @@ class SearchPanel(wx.Panel):
         # EntryListPanelのエントリー一覧を更新
         self.GetParent().entry_panel.update_entry_list(search_result)
 
-    def make_query(self, rate, operator, category):
+    def make_query(self, rate, operator, category, freeword):
+        """
+        Mongo DBに投げる検索クエリを作成する
+        """
+        query = []
+        query += self.make_category_query(category)
+        query += self.make_rate_query(rate, operator)
+        query += self.make_freeword_query(freeword)
+        return {"$and": query}
+
+    def make_category_query(self, category):
         query = []
         if category != "ALL":
             query.append({"category": category})
+        return query
+
+    def make_rate_query(self, rate, operator):
+        query = []
         if rate == "":
-            return
+            return query
         elif rate == "unrated":
             query.append({'rate': rate})
         else:
@@ -660,7 +677,27 @@ class SearchPanel(wx.Panel):
                 query.append({"rate": {"$lte": rate}})
             else:
                 query.append({"rate": rate})
-        return {"$and": query}
+        return query
+
+    def make_freeword_query(self, freeword):
+        """
+        フリーワード検索のクエリ作成
+        tags, title, authorでOR検索する
+        複数単語を指定した場合は、OR検索の結果をAND検索する
+        """
+        if freeword == "":
+            return []
+        # 全角スペースを半角スペースに置換
+        freewords = freeword.replace("　", " ")
+        word_l = freewords.split()
+        freeword_q = []
+        for word in word_l:
+            tags_q = {"tags": {"$regex": word}}
+            title_q = {"title": {"$regex": word}}
+            author_q = {"author": {"$regex": word}}
+            freeword_q.append({"$or": [tags_q, title_q, author_q]})
+
+        return [{"$and": freeword_q}]
 
     def DB_search(self, query):
         col = self.GetParent().collection
