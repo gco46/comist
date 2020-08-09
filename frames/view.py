@@ -95,7 +95,7 @@ class EntryListPanel(wx.Panel):
         # 変数初期化
         self.init_paging_attributes()
         # Ctrl objectを初期化して配置
-        self.set_panel_title('Entries')
+        self.init_panel_title('Entries')
         self.init_search_layout()
         self.init_thumbnails()
         self.init_paging_button()
@@ -115,7 +115,7 @@ class EntryListPanel(wx.Panel):
                         flag=wx.ALIGN_CENTER | wx.TOP, border=5)
         self.SetSizer(self.layout)
 
-    def set_panel_title(self, title):
+    def init_panel_title(self, title):
         """
         パネル上部のタイトル設定
         """
@@ -506,34 +506,39 @@ class SearchPanel(wx.Panel):
     def __init__(self, parent, id):
         super().__init__(parent, id, style=wx.BORDER_SUNKEN)
 
-        self.set_panel_title('Search')
+        self.init_panel_title('Search')
         # 共通使用するフォント
         self.font = wx.Font(
             18, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL,
             wx.FONTWEIGHT_NORMAL
         )
         # レートを選択する為のlayout作成
-        self.set_rate_cmbbtn()
+        self.init_rate_cmbbtn()
 
         # カテゴリを選択するlayout作成
-        self.set_categories_rdbtn()
+        self.init_categories_rdbtn()
+
+        # フリーワード検索のlayout作成
+        self.init_freeword_box()
 
         # 検索ボタン
         self.search_button = wx.Button(self, wx.ID_ANY, 'SEARCH')
         self.search_button.Bind(wx.EVT_BUTTON, self.click_search)
 
         self.layout = wx.BoxSizer(wx.VERTICAL)
-        self.layout.Add(self.title_text, flag=wx.ALIGN_CENTER)
+        self.layout.Add(self.title_text, flag=wx.EXPAND | wx.BOTTOM, border=15)
         self.layout.Add(self.rate_layout,
-                        flag=wx.ALIGN_CENTER | wx.TOP, border=15)
+                        flag=wx.EXPAND | wx.LEFT, border=150)
         self.layout.Add(self.category_rdbox,
-                        flag=wx.ALIGN_CENTER | wx.TOP, border=15)
+                        flag=wx.EXPAND | wx.RIGHT | wx.LEFT, border=50)
+        self.layout.Add(self.freeword_layout,
+                        flag=wx.EXPAND | wx.RIGHT | wx.LEFT | wx.TOP, border=30)
         self.layout.Add(self.search_button,
-                        flag=wx.ALIGN_RIGHT)
+                        flag=wx.ALIGN_RIGHT | wx.TOP, border=30)
 
         self.SetSizer(self.layout)
 
-    def set_panel_title(self, title):
+    def init_panel_title(self, title):
         """
         パネル上部のタイトル設定
         """
@@ -546,7 +551,7 @@ class SearchPanel(wx.Panel):
         )
         self.title_text.SetFont(font_Title)
 
-    def set_rate_cmbbtn(self):
+    def init_rate_cmbbtn(self):
         """
         レート検索用のコンボボックスを設定
         """
@@ -571,7 +576,7 @@ class SearchPanel(wx.Panel):
         self.rate_layout.Add(self.operator_cmbbox, flag=wx.RIGHT, border=5)
         self.rate_layout.Add(self.rate_cmbbox, flag=wx.RIGHT, border=5)
 
-    def set_categories_rdbtn(self):
+    def init_categories_rdbtn(self):
         """
         カテゴリ選択のラジオボタンを設定
         """
@@ -585,6 +590,21 @@ class SearchPanel(wx.Panel):
             style=wx.RA_VERTICAL
         )
         self.category_rdbox.SetFont(self.font)
+
+    def init_freeword_box(self):
+        self.freeword_layout = wx.BoxSizer(wx.VERTICAL)
+
+        freeword_text = wx.StaticText(
+            self, wx.ID_ANY, "free word:")
+        font = wx.Font(
+            13, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL,
+            wx.FONTWEIGHT_NORMAL
+        )
+        freeword_text.SetFont(font)
+        self.freeword_box = wx.TextCtrl(self, wx.ID_ANY)
+
+        self.freeword_layout.Add(freeword_text)
+        self.freeword_layout.Add(self.freeword_box, flag=wx.EXPAND)
 
     def reset_operator_cmbbox(self, event):
         """
@@ -603,9 +623,12 @@ class SearchPanel(wx.Panel):
         category_q_idx = self.category_rdbox.GetSelection()
         selected = self.GetParent().collection_panel.get_selected_col()
         category_q = self.category_dict[selected][category_q_idx]
+        # フリーワードのクエリを取得
+        freeword_q = self.freeword_box.GetValue()
 
         # 取得した選択状態からクエリ作成、DB検索
-        self.query = self.make_query(rate_q, operator_q, category_q)
+        self.query = self.make_query(
+            rate_q, operator_q, category_q, freeword_q)
         # rateが選択されていない場合は終了
         if self.query is None:
             return
@@ -624,12 +647,26 @@ class SearchPanel(wx.Panel):
         # EntryListPanelのエントリー一覧を更新
         self.GetParent().entry_panel.update_entry_list(search_result)
 
-    def make_query(self, rate, operator, category):
+    def make_query(self, rate, operator, category, freeword):
+        """
+        Mongo DBに投げる検索クエリを作成する
+        """
+        query = []
+        query += self.make_category_query(category)
+        query += self.make_rate_query(rate, operator)
+        query += self.make_freeword_query(freeword)
+        return {"$and": query}
+
+    def make_category_query(self, category):
         query = []
         if category != "ALL":
             query.append({"category": category})
+        return query
+
+    def make_rate_query(self, rate, operator):
+        query = []
         if rate == "":
-            return
+            return query
         elif rate == "unrated":
             query.append({'rate': rate})
         else:
@@ -640,7 +677,27 @@ class SearchPanel(wx.Panel):
                 query.append({"rate": {"$lte": rate}})
             else:
                 query.append({"rate": rate})
-        return {"$and": query}
+        return query
+
+    def make_freeword_query(self, freeword):
+        """
+        フリーワード検索のクエリ作成
+        tags, title, authorでOR検索する
+        複数単語を指定した場合は、OR検索の結果をAND検索する
+        """
+        if freeword == "":
+            return []
+        # 全角スペースを半角スペースに置換
+        freewords = freeword.replace("　", " ")
+        word_l = freewords.split()
+        freeword_q = []
+        for word in word_l:
+            tags_q = {"tags": {"$regex": word}}
+            title_q = {"title": {"$regex": word}}
+            author_q = {"author": {"$regex": word}}
+            freeword_q.append({"$or": [tags_q, title_q, author_q]})
+
+        return [{"$and": freeword_q}]
 
     def DB_search(self, query):
         col = self.GetParent().collection
@@ -657,7 +714,7 @@ class CollectionPanel(wx.Panel):
     def __init__(self, parent, id):
         super().__init__(parent, id, style=wx.BORDER_SUNKEN)
 
-        self.set_panel_title('Collections')
+        self.init_panel_title('Collections')
         self.init_radio_buttons()
         self.init_selected_col()
 
@@ -667,7 +724,7 @@ class CollectionPanel(wx.Panel):
 
         self.SetSizer(self.layout)
 
-    def set_panel_title(self, title):
+    def init_panel_title(self, title):
         """
         パネル上部のタイトル設定
         """

@@ -41,6 +41,10 @@ class MongoPipeline(object):
 
     def process_item(self, item, spider):
         comic_key = item['comic_key']
+        # image_urlが取得できなかったitemはスキップする。
+        image_urls = item['image_urls']
+        if len(image_urls) == 0:
+            raise DropItem('key:{0} contains no image urls.'.format(comic_key))
         # 既にDB登録されたitemはスキップする。
         # DB登録の有無はcomic_keyを使用して判断
         comicExists = self.collection.find_one({'comic_key': comic_key})

@@ -35,6 +35,22 @@ class GetComicsSpider(scrapy.Spider):
         "rezu-yuri",
         "front"                 # 最新のエントリから取得
     ]
+    category_dict = {
+        "eromanga-night": "エロ漫画の夜",
+        "gyaru": "ギャル",
+        "hinnyu": "貧乳",
+        "jingai-kemono": "人外・獣",
+        "jk-jc": "JK・JC",
+        "jyukujyo-hitozuma": "熟女・人妻",
+        "kinshinsoukan": "近親相姦",
+        "kosupure": "コスプレ",
+        "kyonyu-binyu": "巨乳・美乳",
+        "netorare-netori": "寝取られ・寝取り",
+        "ol-sister": "OL・お姉さん",
+        "onesyota": "おねショタ",
+        "rape": "レイプ",
+        "rezu-yuri": "レズ・百合",
+    }
     # リクエストヘッダ情報
     headers = {
         # "Cache-Control": "max-age=0",
@@ -67,10 +83,7 @@ class GetComicsSpider(scrapy.Spider):
         # 機能確認では指定のエントリーのみクロールする
         if self.test_crawl:
             self.start_urls.append(
-                urllib.parse.urljoin(self.base_url, "eromanga-night/68563")
-            )
-            self.start_urls.append(
-                urllib.parse.urljoin(self.base_url, "kinshinsoukan/1992")
+                urllib.parse.urljoin(self.base_url, "ol-sister/166223")
             )
             return
         # category引数指定があった場合はリスト化
@@ -221,7 +234,8 @@ class GetComicsSpider(scrapy.Spider):
         input: response object
         output: str, category (in japanese)
         """
-        return response.css(Css.to_category).extract_first()
+        cat = response.url.split("/")[-2]
+        return self.category_dict[cat]
 
     def _get_continuous_work(self, response):
         """
