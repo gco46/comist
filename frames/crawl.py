@@ -57,8 +57,6 @@ class CrawlFrame(wx.Frame):
     def close_frame(self, event):
         """
         ウィンドウ閉じる処理
-        TODO: crawl中はframeを閉じられないようにする
-              (スレッド処理が生き残るため)
         """
         btn_label = self.option_panel.crawl_stop_button.GetLabel()
         # crawling中ならば, 先にSTOPするようにダイアログで表示する
@@ -456,7 +454,7 @@ class ScrapeThread(Thread):
         スクレイピングサブプロセスを実行
         """
         # 非同期処理でスクレイピングを実行
-        # TODO: Windows用の中断処理追加
+        # TODO: Windows用の中断処理のテスト
         if os.name == "posix":          # UNIX系処理
             # cmdまでkillできるようにするためにexecをつけて実行する
             self.proc = subprocess.Popen(
