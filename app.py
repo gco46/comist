@@ -15,11 +15,13 @@ class MyFrame(wx.Frame):
         btn_Scrape = wx.Button(panel, -1, 'Scrape')
         vbox.Add(btn_Scrape, 0, wx.ALL, 10)
         btn_IO_Rating = wx.Button(panel, -1, "Import/Export Rating")
+        vbox.Add(btn_IO_Rating, 0, wx.ALL, 10)
 
         panel.SetSizer(vbox)
 
         btn_ReadComics.Bind(wx.EVT_BUTTON, self.OnClickReadComics)
         btn_Scrape.Bind(wx.EVT_BUTTON, self.OnClickScrape)
+        btn_IO_Rating.Bind(wx.EVT_BUTTON, self.OnClickIORating)
         self.Centre()
         self.Show(True)
 
@@ -31,6 +33,7 @@ class MyFrame(wx.Frame):
 
     def OnClickIORating(self, event):
         # TODO: Ratingフレーム実装
+        print("test")
         pass
 
 
