@@ -1,6 +1,7 @@
 import wx
 from frames.view import ViewFrame
 from frames.crawl import CrawlFrame
+from frames.rating import RatingFrame
 
 
 class MyFrame(wx.Frame):
@@ -32,9 +33,7 @@ class MyFrame(wx.Frame):
         view_frame = ViewFrame(self)
 
     def OnClickIORating(self, event):
-        # TODO: Ratingフレーム実装
-        print("test")
-        pass
+        rating_frame = RatingFrame(self)
 
 
 if __name__ == "__main__":
