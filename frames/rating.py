@@ -4,12 +4,16 @@ from pathlib import Path
 
 
 class RatingFrame(wx.Frame):
+    """
+    Import/Export Rating選択後画面
+    """
+
     def __init__(self, parent):
         wx.Frame.__init__(self, parent, wx.ID_ANY,
                           'rating frame', size=(700, 800))
         self._open_DB()
+        # DB close処理を閉じるボタンと関連付け
         self.Bind(wx.EVT_CLOSE, self._close_DB)
-        # TODO: DB close処理
         self.layout = wx.BoxSizer(wx.VERTICAL)
         self.export_panel = ExportPanel(self, wx.ID_ANY)
         # TODO:import 用layout
@@ -38,40 +42,16 @@ class RatingFrame(wx.Frame):
         self.client.close()
         self.Destroy()
 
-    def init_export_layout(self):
-        self.export_layout = wx.BoxSizer(wx.HORIZONTAL)
-        self.save_to = wx.StaticText(self, wx.ID_ANY, "save to:")
-        font = wx.Font(
-            13, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL,
-            wx.FONTWEIGHT_NORMAL
-        )
-        self.save_to.SetFont(font)
-        self.export_dir_path = wx.TextCtrl(self, wx.ID_ANY, "")
-        self.export_button = wx.Button(self, wx.ID_ANY, "choose")
-        self.export_button.Bind(wx.EVT_BUTTON, self.click_choose_export_dir)
-
-        self.export_layout.Add(
-            self.save_to, proportion=1, flag=wx.ALIGN_CENTER)
-        self.export_layout.Add(self.export_dir_path, proportion=6)
-        self.export_layout.Add(
-            self.export_button, proportion=1, flag=wx.ALIGN_CENTER)
-
-    def click_choose_export_dir(self, event):
-        directory = wx.DirDialog(
-            self,
-            style=wx.DD_CHANGE_DIR,
-            message="保存先フォルダ"
-        )
-        if directory.ShowModal() == wx.ID_OK:
-            self.export_dir_path.SetValue(directory.GetPath())
-        directory.Destroy()
-
 
 class ExportPanel(wx.Panel):
     def __init__(self, parent, id):
         super().__init__(parent, id, style=wx.BORDER_SUNKEN)
+        # 保存先フォルダ選択のレイアウト初期化
         self.init_export_layout()
+        # コレクション選択のラジオボタン初期化
         self.init_radio_btn()
+
+        # export実行ボタン追加
         self.export_btn = wx.Button(self, wx.ID_ANY, "export")
 
         self.layout = wx.BoxSizer(wx.VERTICAL)
@@ -83,6 +63,9 @@ class ExportPanel(wx.Panel):
         self.SetSizer(self.layout)
 
     def init_export_layout(self):
+        """
+        保存先フォルダ選択
+        """
         self.export_layout = wx.BoxSizer(wx.HORIZONTAL)
         self.save_to = wx.StaticText(self, wx.ID_ANY, "save to:")
         font = wx.Font(
@@ -101,6 +84,9 @@ class ExportPanel(wx.Panel):
             self.export_button, proportion=1, flag=wx.ALIGN_CENTER)
 
     def init_radio_btn(self):
+        """
+        export対象のコレクション選択ラジオボタンの初期化
+        """
         font = wx.Font(
             14, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL,
             wx.FONTWEIGHT_NORMAL
@@ -112,6 +98,9 @@ class ExportPanel(wx.Panel):
         self.radio_box.SetFont(font)
 
     def click_choose_export_dir(self, event):
+        """
+        export結果の保存先をフォルダで指定(
+        """
         directory = wx.DirDialog(
             self,
             style=wx.DD_CHANGE_DIR,
@@ -122,4 +111,7 @@ class ExportPanel(wx.Panel):
         directory.Destroy()
 
     def click_export(self, event):
+        """
+        export実行
+        """
         pass
