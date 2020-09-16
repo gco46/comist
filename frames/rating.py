@@ -15,10 +15,14 @@ class RatingFrame(wx.Frame):
         # DB close処理を閉じるボタンと関連付け
         self.Bind(wx.EVT_CLOSE, self._close_DB)
         self.layout = wx.BoxSizer(wx.VERTICAL)
-        self.export_panel = ExportPanel(self, wx.ID_ANY)
-        # TODO:import 用layout
+        # tab表示
+        self.notebook = wx.Notebook(self, wx.ID_ANY)
+        export_panel = ExportPanel(self.notebook, wx.ID_ANY)
+        import_panel = ImportPanel(self.notebook, wx.ID_ANY)
+        self.notebook.InsertPage(0, export_panel, "export")
+        self.notebook.InsertPage(1, import_panel, "import")
 
-        self.layout.Add(self.export_panel)
+        self.layout.Add(self.notebook, flag=wx.EXPAND)
         self.SetSizer(self.layout)
         self.Centre()
         self.Show(True)
@@ -92,7 +96,7 @@ class ExportPanel(wx.Panel):
             wx.FONTWEIGHT_NORMAL
         )
         self.radio_box = wx.RadioBox(
-            self, wx.ID_ANY, '', choices=self.GetParent().col_list,
+            self, wx.ID_ANY, '', choices=self.GetParent().GetParent().col_list,
             style=wx.RA_VERTICAL
         )
         self.radio_box.SetFont(font)
@@ -115,3 +119,71 @@ class ExportPanel(wx.Panel):
         export実行
         """
         pass
+
+
+class ImportPanel(wx.Panel):
+    def __init__(self, parent, id):
+        super().__init__(parent, id, style=wx.BORDER_SUNKEN)
+        # 入力ファイル選択のレイアウト初期化
+        self.init_import_layout()
+        # コレクション選択のラジオボタン初期化
+        self.init_radio_btn()
+
+        # export実行ボタン追加
+        self.import_btn = wx.Button(self, wx.ID_ANY, "import")
+
+        self.layout = wx.BoxSizer(wx.VERTICAL)
+
+        self.layout.Add(self.import_layout)
+        self.layout.Add(self.radio_box, flag=wx.ALIGN_CENTER)
+        self.layout.Add(self.import_btn, flag=wx.ALIGN_RIGHT |
+                        wx.TOP, border=5)
+        self.SetSizer(self.layout)
+
+    def init_import_layout(self):
+        """
+        入力ファイル選択
+        """
+        self.import_layout = wx.BoxSizer(wx.HORIZONTAL)
+        self.input_file = wx.StaticText(self, wx.ID_ANY, "input:")
+        font = wx.Font(
+            13, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL,
+            wx.FONTWEIGHT_NORMAL
+        )
+        self.input_file.SetFont(font)
+        self.import_file_path = wx.TextCtrl(self, wx.ID_ANY, "")
+        self.import_button = wx.Button(self, wx.ID_ANY, "choose")
+        self.import_button.Bind(wx.EVT_BUTTON, self.click_choose_import_file)
+
+        self.import_layout.Add(
+            self.input_file, proportion=1, flag=wx.ALIGN_CENTER)
+        self.import_layout.Add(self.import_file_path, proportion=6)
+        self.import_layout.Add(
+            self.import_button, proportion=1, flag=wx.ALIGN_CENTER)
+
+    def init_radio_btn(self):
+        """
+        import対象のコレクション選択ラジオボタンの初期化
+        """
+        font = wx.Font(
+            14, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL,
+            wx.FONTWEIGHT_NORMAL
+        )
+        self.radio_box = wx.RadioBox(
+            self, wx.ID_ANY, '', choices=self.GetParent().GetParent().col_list,
+            style=wx.RA_VERTICAL
+        )
+        self.radio_box.SetFont(font)
+
+    def click_choose_import_file(self, event):
+        """
+        importするファイルを指定
+        """
+        file = wx.FileDialog(
+            self,
+            style=wx.DD_CHANGE_DIR,
+            message="保存先フォルダ"
+        )
+        if file.ShowModal() == wx.ID_OK:
+            self.import_file_path.SetValue(file.GetPath())
+        file.Destroy()
