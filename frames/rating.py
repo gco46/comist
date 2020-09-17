@@ -1,5 +1,6 @@
 import wx
 from pymongo import MongoClient
+import pandas as pd
 from pathlib import Path
 
 
@@ -10,7 +11,9 @@ class RatingFrame(wx.Frame):
 
     def __init__(self, parent):
         wx.Frame.__init__(self, parent, wx.ID_ANY,
-                          'rating frame', size=(700, 800))
+                          'rating IO frame')
+        # 最大化(Notebookの描画がうまくいかない)
+        self.Maximize()
         self._open_DB()
         # DB close処理を閉じるボタンと関連付け
         self.Bind(wx.EVT_CLOSE, self._close_DB)
@@ -19,12 +22,12 @@ class RatingFrame(wx.Frame):
         self.notebook = wx.Notebook(self, wx.ID_ANY)
         export_panel = ExportPanel(self.notebook, wx.ID_ANY)
         import_panel = ImportPanel(self.notebook, wx.ID_ANY)
-        self.notebook.InsertPage(0, export_panel, "export")
-        self.notebook.InsertPage(1, import_panel, "import")
+        self.notebook.AddPage(export_panel, "export")
+        self.notebook.AddPage(import_panel, "import")
 
-        self.layout.Add(self.notebook, flag=wx.EXPAND)
+        self.layout.Add(self.notebook, flag=wx.ALL | wx.EXPAND, border=5)
         self.SetSizer(self.layout)
-        self.Centre()
+        self.Layout()
         self.Show(True)
 
     def _open_DB(self):
@@ -46,6 +49,12 @@ class RatingFrame(wx.Frame):
         self.client.close()
         self.Destroy()
 
+    def select_collection(self, col):
+        """
+        DBのコレクションを選択
+        """
+        self.collection = self.db[col]
+
 
 class ExportPanel(wx.Panel):
     def __init__(self, parent, id):
@@ -57,10 +66,11 @@ class ExportPanel(wx.Panel):
 
         # export実行ボタン追加
         self.export_btn = wx.Button(self, wx.ID_ANY, "export")
+        self.export_btn.Bind(wx.EVT_BUTTON, self.click_export)
 
         self.layout = wx.BoxSizer(wx.VERTICAL)
 
-        self.layout.Add(self.export_layout)
+        self.layout.Add(self.export_layout, flag=wx.ALIGN_CENTER)
         self.layout.Add(self.radio_box, flag=wx.ALIGN_CENTER)
         self.layout.Add(self.export_btn, flag=wx.ALIGN_RIGHT |
                         wx.TOP, border=5)
@@ -118,7 +128,40 @@ class ExportPanel(wx.Panel):
         """
         export実行
         """
-        pass
+        out_path = Path(self.export_dir_path.GetValue())
+        if not out_path.exists() or str(out_path) == ".":
+            # 保存先パスが適切でない場合は終了
+            dialog = wx.MessageDialog(
+                None, 'choose exist path.',
+                style=wx.OK
+            )
+            res = dialog.ShowModal()
+            return
+        target_cat = self.radio_box.GetStringSelection()
+        self.GetParent().GetParent().select_collection(target_cat)
+        file_name = target_cat + ".csv"
+        save_path = out_path / file_name
+
+        # unrated以外を取得するクエリ
+        query = {
+            "rate": {"$ne": "unrated"}
+        }
+        collection = self.GetParent().GetParent().collection
+
+        # 検索結果
+        rated_item = collection.find(query)
+        # DataFrameに取り込む
+        rated_item = pd.DataFrame.from_dict(list(rated_item)).astype(object)
+        # comic_key と rateのみ取得
+        rated_item = rated_item[["comic_key", "rate"]]
+        # 指定した場所へcsv出力
+        rated_item.to_csv(str(save_path), header=False, index=False)
+
+        dialog = wx.MessageDialog(
+            None, 'Complete!',
+            style=wx.OK
+        )
+        res = dialog.ShowModal()
 
 
 class ImportPanel(wx.Panel):
@@ -134,7 +177,7 @@ class ImportPanel(wx.Panel):
 
         self.layout = wx.BoxSizer(wx.VERTICAL)
 
-        self.layout.Add(self.import_layout)
+        self.layout.Add(self.import_layout, flag=wx.ALIGN_CENTER)
         self.layout.Add(self.radio_box, flag=wx.ALIGN_CENTER)
         self.layout.Add(self.import_btn, flag=wx.ALIGN_RIGHT |
                         wx.TOP, border=5)
@@ -187,3 +230,6 @@ class ImportPanel(wx.Panel):
         if file.ShowModal() == wx.ID_OK:
             self.import_file_path.SetValue(file.GetPath())
         file.Destroy()
+
+    def click_import(self, event):
+        pass

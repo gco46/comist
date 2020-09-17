@@ -15,7 +15,7 @@ class MyFrame(wx.Frame):
         vbox.Add(btn_ReadComics, 0, wx.ALL, 10)
         btn_Scrape = wx.Button(panel, -1, 'Scrape')
         vbox.Add(btn_Scrape, 0, wx.ALL, 10)
-        btn_IO_Rating = wx.Button(panel, -1, "Import/Export Rating")
+        btn_IO_Rating = wx.Button(panel, -1, "Import/Export Rate File")
         vbox.Add(btn_IO_Rating, 0, wx.ALL, 10)
 
         panel.SetSizer(vbox)
