@@ -154,6 +154,8 @@ class ExportPanel(wx.Panel):
         rated_item = pd.DataFrame.from_dict(list(rated_item)).astype(object)
         # comic_key と rateのみ取得
         rated_item = rated_item[["comic_key", "rate"]]
+        # comic_keyで昇順ソート
+        rated_item = rated_item.sort_values("comic_key")
         # 指定した場所へcsv出力
         rated_item.to_csv(str(save_path), header=False, index=False)
 
