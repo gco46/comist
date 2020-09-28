@@ -137,6 +137,8 @@ class ExportPanel(wx.Panel):
             )
             res = dialog.ShowModal()
             return
+
+        # ラジオボタンで選択したコレクションをdbで指定
         target_cat = self.radio_box.GetStringSelection()
         self.GetParent().GetParent().select_collection(target_cat)
         file_name = target_cat + ".csv"
@@ -176,6 +178,7 @@ class ImportPanel(wx.Panel):
 
         # export実行ボタン追加
         self.import_btn = wx.Button(self, wx.ID_ANY, "import")
+        self.import_btn.Bind(wx.EVT_BUTTON, self.click_import)
 
         self.layout = wx.BoxSizer(wx.VERTICAL)
 
@@ -234,4 +237,44 @@ class ImportPanel(wx.Panel):
         file.Destroy()
 
     def click_import(self, event):
-        pass
+        csv_path = Path(self.import_file_path.GetValue())
+        if not csv_path.exists() or str(csv_path) == ".":
+            # csvパスが適切でない場合は終了
+            dialog = wx.MessageDialog(
+                None, 'choose exist path.',
+                style=wx.OK
+            )
+            res = dialog.ShowModal()
+            return
+
+        # ラジオボタンで選択したコレクションをdbで指定
+        target_cat = self.radio_box.GetStringSelection()
+        self.GetParent().GetParent().select_collection(target_cat)
+
+        rate_df = pd.read_csv(str(csv_path), names=["comic_key", "rate"])
+        updated = self.register_rate(rate_df)
+
+        dialog = wx.MessageDialog(
+            None, '{0} items are updated!'.format(updated),
+            style=wx.OK
+        )
+        res = dialog.ShowModal()
+
+    def register_rate(self, rate_df):
+        """
+        レート登録
+        """
+        # 更新されたアイテム数をカウント
+        cnt = 0
+        # コレクション取得
+        collection = self.GetParent().GetParent().collection
+        for index, item in rate_df.iterrows():
+            target = {"comic_key": item["comic_key"]}
+            command = {"$set": {"rate": item["rate"]}}
+            # comic_keyに該当するアイテムのrateを更新
+            # 該当するアイテムがなければスキップ
+            res = collection.update_one(target, command)
+            # 更新されたアイテムがあればカウントアップ
+            if res.modified_count:
+                cnt += 1
+        return cnt
