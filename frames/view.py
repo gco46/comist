@@ -43,12 +43,6 @@ class ViewFrame(wx.Frame):
         self.Centre()
         self.Show(True)
 
-    def click(self, event):
-        click = event.GetEventObject()
-        print(click)
-        click_text = click.GetLabel()
-        self.result_text.SetLabel(click_text)
-
     def _open_DB(self):
         """
         ローカルMongoDBに接続し、ScrapedDataを開く
