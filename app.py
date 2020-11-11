@@ -1,6 +1,7 @@
 import wx
 from frames.view import ViewFrame
 from frames.crawl import CrawlFrame
+from frames.rating import RatingFrame
 
 
 class MyFrame(wx.Frame):
@@ -14,12 +15,14 @@ class MyFrame(wx.Frame):
         vbox.Add(btn_ReadComics, 0, wx.ALL, 10)
         btn_Scrape = wx.Button(panel, -1, 'Scrape')
         vbox.Add(btn_Scrape, 0, wx.ALL, 10)
-        btn_IO_Rating = wx.Button(panel, -1, "Import/Export Rating")
+        btn_IO_Rating = wx.Button(panel, -1, "Import/Export Rate File")
+        vbox.Add(btn_IO_Rating, 0, wx.ALL, 10)
 
         panel.SetSizer(vbox)
 
         btn_ReadComics.Bind(wx.EVT_BUTTON, self.OnClickReadComics)
         btn_Scrape.Bind(wx.EVT_BUTTON, self.OnClickScrape)
+        btn_IO_Rating.Bind(wx.EVT_BUTTON, self.OnClickIORating)
         self.Centre()
         self.Show(True)
 
@@ -30,8 +33,7 @@ class MyFrame(wx.Frame):
         view_frame = ViewFrame(self)
 
     def OnClickIORating(self, event):
-        # TODO: Ratingフレーム実装
-        pass
+        rating_frame = RatingFrame(self)
 
 
 if __name__ == "__main__":

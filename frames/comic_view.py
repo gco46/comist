@@ -220,7 +220,7 @@ class ComicViewFrame(wx.Frame):
             command = {"$set": {"rate": selected}}
         else:
             command = {"$set": {"rate": int(selected)}}
-        col.update(target, command)
+        col.update_one(target, command)
 
     def init_cont_work_btn(self):
         """
