@@ -1,6 +1,7 @@
 from pathlib import Path
 import wx.lib.newevent
 import re
+import platform
 
 # 漫画保存用のディレクトリパス
 COMIC_PATH = Path('data/Comics')
@@ -14,10 +15,16 @@ IMAGE_HEIGHT = 1024
 IMAGE_WIDTH = 712
 # 漫画画像サイズ (width, height)
 IMAGE_SIZE = (IMAGE_WIDTH, IMAGE_HEIGHT)
-# サムネイル Height
-SUMB_HEIGHT = 260
-# サムネイル Width
-SUMB_WIDTH = 180
+if platform.system() == "Darwin":
+    # サムネイル Height
+    SUMB_HEIGHT = 220
+    # サムネイル Width
+    SUMB_WIDTH = 160
+else:
+    # サムネイル Height
+    SUMB_HEIGHT = 260
+    # サムネイル Width
+    SUMB_WIDTH = 180
 
 
 def atof(text):
