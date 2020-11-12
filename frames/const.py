@@ -17,9 +17,9 @@ IMAGE_WIDTH = 712
 IMAGE_SIZE = (IMAGE_WIDTH, IMAGE_HEIGHT)
 if platform.system() == "Darwin":
     # サムネイル Height
-    SUMB_HEIGHT = 220
+    SUMB_HEIGHT = 215
     # サムネイル Width
-    SUMB_WIDTH = 160
+    SUMB_WIDTH = 150
 else:
     # サムネイル Height
     SUMB_HEIGHT = 260
