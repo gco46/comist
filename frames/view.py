@@ -557,6 +557,9 @@ class SearchPanel(wx.Panel):
         elements = ['unrated', '1', '2', '3', '4', '5']
         self.rate_cmbbox = wx.ComboBox(self, wx.ID_ANY, 'choose',
                                        choices=elements, style=wx.CB_READONLY)
+        # 'unrated'を選択
+        self.rate_cmbbox.SetSelection(0)
+
         # 比較演算子選択コンボボックス
         operators = ['', '>=', '<=']
         self.operator_cmbbox = wx.ComboBox(
