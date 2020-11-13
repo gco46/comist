@@ -4,9 +4,6 @@
 
 This is a tool for scraping adult comics and managing them locally. This tool allows for scraping, viewing and rating of comics.
 
-The following websites are currently supported.
-
-- https://eromanga-yoru.com/front
 
 
 
