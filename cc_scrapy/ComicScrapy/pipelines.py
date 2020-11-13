@@ -115,9 +115,17 @@ class SymboliclinkPipeline(object):
 
 
 class SaveComicPipeline(ImagesPipeline):
+    site_dict = {
+        "GetComics": "eromanga_night",
+    }
+    target_site = None
+
     def get_media_requests(self, item, info):
         for image_url in item['image_urls']:
             yield scrapy.Request(image_url, meta={'comic_key': item["comic_key"]})
+
+    def open_spider(self, spider):
+        self.target_site = self.site_dict[spider.name]
 
     def image_downloaded(self, response, request, info):
         checksum = None
@@ -127,7 +135,8 @@ class SaveComicPipeline(ImagesPipeline):
                 checksum = md5sum(buf)
             width, height = image.size
             filename = request._url.rsplit("/", 1)[1]
-            path = '{0}/{1}'.format(response.meta['comic_key'], filename)
+            path = '{0}/{1}/{2}'.format(self.target_site,
+                                        response.meta['comic_key'], filename)
             self.store.persist_file(
                 path, buf, info,
                 meta={'width': width, 'height': height})
