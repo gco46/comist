@@ -15,12 +15,14 @@ class ComicViewFrame(wx.Frame):
     # 画像サイズ超過の許容量
     size_capacity = 15
 
-    def __init__(self, parent, entry_info):
+    def __init__(self, parent, entry_info, target_site):
         super().__init__(parent, wx.ID_ANY)
         self.Maximize()
         self.Bind(wx.EVT_CLOSE, self.close_frame)
+        self.target_site = target_site
         self.entry_info = entry_info
 
+        self.init_artribute()
         # ViewFrame内のPanel objectを取得
         self.get_view_frame_obj()
 
@@ -62,6 +64,14 @@ class ComicViewFrame(wx.Frame):
         self.SetSizer(self.layout)
         self.Centre()
         self.Show(True)
+
+    def init_artribute(self):
+        self.image_path = c_.COMIC_PATH / self.target_site
+        self.image_size = c_.IMAGE_SIZE
+        self.image_height = c_.IMAGE_HEIGHT
+        self.image_width = c_.IMAGE_WIDTH
+        # 画像サイズ超過の許容量
+        self.size_capacity = 15
 
     def close_frame(self, event):
         """
