@@ -87,7 +87,7 @@ class EntryListPanel(wx.Panel):
     def __init__(self, parent, id):
         super().__init__(parent, id, style=wx.BORDER_SUNKEN)
         # 変数初期化
-        self.init_paging_attributes()
+        self.init_attributes()
         # Ctrl objectを初期化して配置
         self.init_panel_title('Entries')
         self.init_search_layout()
@@ -122,7 +122,7 @@ class EntryListPanel(wx.Panel):
         )
         self.title_text.SetFont(font_Title)
 
-    def init_paging_attributes(self):
+    def init_attributes(self):
         """
         ページングに使用するメンバ変数を初期化する
         """
@@ -131,6 +131,8 @@ class EntryListPanel(wx.Panel):
         # DB検索結果格納用リスト
         # 1ページのエントリ数の空文字要素で初期化
         self.s_result = [""] * self.n_item_per_page
+        # 選択中のtarget site
+        self.target_site = "eromanga_night"
 
     def init_rate_layout(self):
         font = wx.Font(
@@ -315,84 +317,84 @@ class EntryListPanel(wx.Panel):
         # 空のエントリを選択した場合は何もしない
         if entry == "":
             return
-        comic_view_frame = ComicViewFrame(self, entry)
+        comic_view_frame = ComicViewFrame(self, entry, self.target_site)
 
     def click_comic_1(self, event):
         entry = self.s_result[self.e_list_idx * self.n_item_per_page + 1]
         # 空のエントリを選択した場合は何もしない
         if entry == "":
             return
-        comic_view_frame = ComicViewFrame(self, entry)
+        comic_view_frame = ComicViewFrame(self, entry, self.target_site)
 
     def click_comic_2(self, event):
         entry = self.s_result[self.e_list_idx * self.n_item_per_page + 2]
         # 空のエントリを選択した場合は何もしない
         if entry == "":
             return
-        comic_view_frame = ComicViewFrame(self, entry)
+        comic_view_frame = ComicViewFrame(self, entry, self.target_site)
 
     def click_comic_3(self, event):
         entry = self.s_result[self.e_list_idx * self.n_item_per_page + 3]
         # 空のエントリを選択した場合は何もしない
         if entry == "":
             return
-        comic_view_frame = ComicViewFrame(self, entry)
+        comic_view_frame = ComicViewFrame(self, entry, self.target_site)
 
     def click_comic_4(self, event):
         entry = self.s_result[self.e_list_idx * self.n_item_per_page + 4]
         # 空のエントリを選択した場合は何もしない
         if entry == "":
             return
-        comic_view_frame = ComicViewFrame(self, entry)
+        comic_view_frame = ComicViewFrame(self, entry, self.target_site)
 
     def click_comic_5(self, event):
         entry = self.s_result[self.e_list_idx * self.n_item_per_page + 5]
         # 空のエントリを選択した場合は何もしない
         if entry == "":
             return
-        comic_view_frame = ComicViewFrame(self, entry)
+        comic_view_frame = ComicViewFrame(self, entry, self.target_site)
 
     def click_comic_6(self, event):
         entry = self.s_result[self.e_list_idx * self.n_item_per_page + 6]
         # 空のエントリを選択した場合は何もしない
         if entry == "":
             return
-        comic_view_frame = ComicViewFrame(self, entry)
+        comic_view_frame = ComicViewFrame(self, entry, self.target_site)
 
     def click_comic_7(self, event):
         entry = self.s_result[self.e_list_idx * self.n_item_per_page + 7]
         # 空のエントリを選択した場合は何もしない
         if entry == "":
             return
-        comic_view_frame = ComicViewFrame(self, entry)
+        comic_view_frame = ComicViewFrame(self, entry, self.target_site)
 
     def click_comic_8(self, event):
         entry = self.s_result[self.e_list_idx * self.n_item_per_page + 8]
         # 空のエントリを選択した場合は何もしない
         if entry == "":
             return
-        comic_view_frame = ComicViewFrame(self, entry)
+        comic_view_frame = ComicViewFrame(self, entry, self.target_site)
 
     def click_comic_9(self, event):
         entry = self.s_result[self.e_list_idx * self.n_item_per_page + 9]
         # 空のエントリを選択した場合は何もしない
         if entry == "":
             return
-        comic_view_frame = ComicViewFrame(self, entry)
+        comic_view_frame = ComicViewFrame(self, entry, self.target_site)
 
     def click_comic_10(self, event):
         entry = self.s_result[self.e_list_idx * self.n_item_per_page + 10]
         # 空のエントリを選択した場合は何もしない
         if entry == "":
             return
-        comic_view_frame = ComicViewFrame(self, entry)
+        comic_view_frame = ComicViewFrame(self, entry, self.target_site)
 
     def click_comic_11(self, event):
         entry = self.s_result[self.e_list_idx * self.n_item_per_page + 11]
         # 空のエントリを選択した場合は何もしない
         if entry == "":
             return
-        comic_view_frame = ComicViewFrame(self, entry)
+        comic_view_frame = ComicViewFrame(self, entry, self.target_site)
 
     def update_entry_list(self, search_result, page=0):
         """
@@ -448,7 +450,10 @@ class EntryListPanel(wx.Panel):
             # サムネイル設定処理
             comic_key = self.s_result[idx *
                                       self.n_item_per_page + i]["comic_key"]
-            comic_path = self.image_path / comic_key
+            # target siteの取得
+            target_site = self.GetParent().collection_panel.radio_box.GetStringSelection()
+            # 漫画の保存パス作成
+            comic_path = self.image_path / target_site / comic_key
 
             # ファイル数が0ならばスキップ
             tmp = list(comic_path.glob("*"))
@@ -468,6 +473,9 @@ class EntryListPanel(wx.Panel):
                 self.img_w, self.img_h, wx.IMAGE_QUALITY_HIGH)
             thumbnail = tmp_img.ConvertToBitmap()
             self.img_obj_list[i].SetBitmap(thumbnail)
+
+    def set_choosed_target_site(self, target_site):
+        self.target_site = target_site
 
 
 class SearchPanel(wx.Panel):
@@ -759,3 +767,7 @@ class CollectionPanel(wx.Panel):
         ラジオボタンで選択されているコレクションを返す
         """
         return self.radio_box.GetStringSelection()
+
+    def click_rd_box(self, event):
+        target_site = self.radio_box.GetStringSelection()
+        self.GetParent().entry_panel.set_choosed_target_site(target_site)

@@ -115,19 +115,25 @@ class SymboliclinkPipeline(object):
 
 
 class SaveComicPipeline(ImagesPipeline):
+
     def get_media_requests(self, item, info):
         for image_url in item['image_urls']:
             yield scrapy.Request(image_url, meta={'comic_key': item["comic_key"]})
 
     def image_downloaded(self, response, request, info):
         checksum = None
+        if "eromanga-yoru.com" in request._url:
+            save_dir = "eromanga_night"
+        else:
+            raise DropItem("unknown domain")
         for path, image, buf in self.get_images(response, request, info):
             if checksum is None:
                 buf.seek(0)
                 checksum = md5sum(buf)
             width, height = image.size
             filename = request._url.rsplit("/", 1)[1]
-            path = '{0}/{1}'.format(response.meta['comic_key'], filename)
+            path = '{0}/{1}/{2}'.format(save_dir,
+                                        response.meta['comic_key'], filename)
             self.store.persist_file(
                 path, buf, info,
                 meta={'width': width, 'height': height})

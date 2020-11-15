@@ -15,11 +15,16 @@ class ComicViewFrame(wx.Frame):
     # 画像サイズ超過の許容量
     size_capacity = 15
 
-    def __init__(self, parent, entry_info):
+    def __init__(self, parent, entry_info, target_site):
         super().__init__(parent, wx.ID_ANY)
         self.Maximize()
         self.Bind(wx.EVT_CLOSE, self.close_frame)
+        self.target_site = target_site
         self.entry_info = entry_info
+
+        self.init_artribute()
+        # ViewFrame内のPanel objectを取得
+        self.get_view_frame_obj()
 
         # パネル上部の漫画情報を更新
         self.init_info_text()
@@ -60,19 +65,27 @@ class ComicViewFrame(wx.Frame):
         self.Centre()
         self.Show(True)
 
+    def init_artribute(self):
+        self.image_path = c_.COMIC_PATH / self.target_site
+        self.image_size = c_.IMAGE_SIZE
+        self.image_height = c_.IMAGE_HEIGHT
+        self.image_width = c_.IMAGE_WIDTH
+        # 画像サイズ超過の許容量
+        self.size_capacity = 15
+
     def close_frame(self, event):
         """
         Frameを閉じた時にentry list panelを更新
         """
         # search panelからクエリを取得し、再検索と画面更新
-        query = self.GetParent().GetParent().search_panel.query
-        search_result = self.GetParent().GetParent().search_panel.DB_search(query)
+        query = self.search_panel.query
+        search_result = self.search_panel.DB_search(query)
         # 再検索後のエントリ数から表示するページ数を算出
-        n_item_per_page = self.GetParent().n_item_per_page
+        n_item_per_page = self.entry_panel.n_item_per_page
         max_idx = -(-len(search_result) // n_item_per_page) - 1
-        n_page = self.GetParent().e_list_idx
+        n_page = self.entry_panel.e_list_idx
         n_page = min(max_idx, n_page)
-        self.GetParent().update_entry_list(search_result, n_page)
+        self.entry_panel.update_entry_list(search_result, n_page)
         # 画面を閉じる
         self.Destroy()
 
@@ -90,6 +103,16 @@ class ComicViewFrame(wx.Frame):
             # ページ終端でなければ前ページへ
             if self.prev_page_btn_is_enabled:
                 self.draw_prev_page()
+
+    def get_view_frame_obj(self):
+        # CollectionPanel取得
+        self.col_panel = self.GetParent().GetParent().collection_panel
+        # EntryListPanel取得
+        self.entry_panel = self.GetParent()
+        # SearchPanel取得
+        self.search_panel = self.GetParent().GetParent().search_panel
+        # ViewFrame取得
+        self.view_frame = self.GetParent().GetParent()
 
     def init_info_text(self):
         """
@@ -213,7 +236,7 @@ class ComicViewFrame(wx.Frame):
         レートをDBに登録する
         """
         selected = self.radio_box.GetStringSelection()
-        col = self.GetParent().GetParent().collection
+        col = self.view_frame.collection
         key = self.entry_info["comic_key"]
         target = {"comic_key": key}
         if selected == "unrated":
@@ -256,7 +279,7 @@ class ComicViewFrame(wx.Frame):
         """
         前の作品を描画
         """
-        col = self.GetParent().GetParent().collection
+        col = self.view_frame.collection
         c_lst = self.entry_info["continuous_work"]
         e_url = self.entry_info["entry_url"]
         prev_url = c_lst[c_lst.index(e_url) - 1]
@@ -285,7 +308,7 @@ class ComicViewFrame(wx.Frame):
         """
         次の作品を描画
         """
-        col = self.GetParent().GetParent().collection
+        col = self.view_frame.collection
         c_lst = self.entry_info["continuous_work"]
         e_url = self.entry_info["entry_url"]
         next_url = c_lst[c_lst.index(e_url) + 1]
