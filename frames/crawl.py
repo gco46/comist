@@ -5,6 +5,7 @@ from pymongo import MongoClient
 import subprocess
 from threading import Thread
 import os
+import re
 import frames.const as c_
 
 
@@ -443,6 +444,9 @@ class ScrapeThread(Thread):
                 # スクレイピング中断処理
                 self.proc.kill()
                 return
+            # scrapyのDEBUG, WARNINGログはスキップ
+            if re.match(r'[0-9]{4}-[0-9]{2}-[0-9]{2}', line):
+                continue
             wx.CallAfter(print, line, end="")
 
         # クロール完了通知をcrawl option panelに送る
