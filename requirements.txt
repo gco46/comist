@@ -1,4 +1,4 @@
-wxpython==4.1.0
+wxpython==4.1.1
 scrapy==2.4.1
 pandas==1.1.4
 requests==2.25.0
