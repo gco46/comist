@@ -1,5 +1,6 @@
 import wx
-from pymongo import MongoClient
+from wx import Window
+from wx import Image as wxImg
 from pathlib import Path
 import frames.const as c_
 
@@ -8,19 +9,13 @@ class ComicViewFrame(wx.Frame):
     """
     漫画選択後Frame
     """
-    image_path = c_.COMIC_PATH
-    image_size = c_.IMAGE_SIZE
-    image_height = c_.IMAGE_HEIGHT
-    image_width = c_.IMAGE_WIDTH
-    # 画像サイズ超過の許容量
-    size_capacity = 15
 
-    def __init__(self, parent, entry_info, target_site):
+    def __init__(self, parent: Window, entry_info: dict, target_site: str):
         super().__init__(parent, wx.ID_ANY)
         self.Maximize()
         self.Bind(wx.EVT_CLOSE, self.close_frame)
-        self.target_site = target_site
-        self.entry_info = entry_info
+        self.target_site: str = target_site
+        self.entry_info: dict = entry_info
 
         self.init_artribute()
         # ViewFrame内のPanel objectを取得
@@ -65,15 +60,15 @@ class ComicViewFrame(wx.Frame):
         self.Centre()
         self.Show(True)
 
-    def init_artribute(self):
-        self.image_path = c_.COMIC_PATH / self.target_site
-        self.image_size = c_.IMAGE_SIZE
-        self.image_height = c_.IMAGE_HEIGHT
-        self.image_width = c_.IMAGE_WIDTH
+    def init_artribute(self) -> None:
+        self.image_path: Path = c_.COMIC_PATH / self.target_site
+        self.image_size: tuple = c_.IMAGE_SIZE
+        self.image_height: int = c_.IMAGE_HEIGHT
+        self.image_width: int = c_.IMAGE_WIDTH
         # 画像サイズ超過の許容量
-        self.size_capacity = 15
+        self.size_capacity: int = 15
 
-    def close_frame(self, event):
+    def close_frame(self, event) -> None:
         """
         Frameを閉じた時にentry list panelを更新
         """
@@ -81,15 +76,15 @@ class ComicViewFrame(wx.Frame):
         query = self.search_panel.query
         search_result = self.search_panel.DB_search(query)
         # 再検索後のエントリ数から表示するページ数を算出
-        n_item_per_page = self.entry_panel.n_item_per_page
-        max_idx = -(-len(search_result) // n_item_per_page) - 1
-        n_page = self.entry_panel.e_list_idx
-        n_page = min(max_idx, n_page)
+        n_item_per_page: int = self.entry_panel.n_item_per_page
+        max_idx: int = -(-len(search_result) // n_item_per_page) - 1
+        n_page: int = self.entry_panel.e_list_idx
+        n_page: int = min(max_idx, n_page)
         self.entry_panel.update_entry_list(search_result, n_page)
         # 画面を閉じる
         self.Destroy()
 
-    def on_key(self, event):
+    def on_key(self, event) -> None:
         """
         キーイベント
         左右の矢印キーが押されたときにページ送り処理をする
@@ -104,17 +99,17 @@ class ComicViewFrame(wx.Frame):
             if self.prev_page_btn_is_enabled:
                 self.draw_prev_page()
 
-    def get_view_frame_obj(self):
+    def get_view_frame_obj(self) -> None:
         # CollectionPanel取得
-        self.col_panel = self.GetParent().GetParent().collection_panel
+        self.col_panel: Window = self.GetParent().GetParent().collection_panel
         # EntryListPanel取得
-        self.entry_panel = self.GetParent()
+        self.entry_panel: Window = self.GetParent()
         # SearchPanel取得
-        self.search_panel = self.GetParent().GetParent().search_panel
+        self.search_panel: Window = self.GetParent().GetParent().search_panel
         # ViewFrame取得
-        self.view_frame = self.GetParent().GetParent()
+        self.view_frame: Window = self.GetParent().GetParent()
 
-    def init_info_text(self):
+    def init_info_text(self) -> None:
         """
         エントリのタイトル、作者、カテゴリの情報を初期化
         """
@@ -148,7 +143,7 @@ class ComicViewFrame(wx.Frame):
             cat_set, flag=wx.ALIGN_CENTER | wx.BOTTOM, border=7
         )
 
-    def init_paging_button(self):
+    def init_paging_button(self) -> None:
         """
         ページングボタンを初期化
         """
@@ -173,7 +168,7 @@ class ComicViewFrame(wx.Frame):
             self.next_page, flag=wx.ALIGN_CENTER | wx.LEFT, border=10
         )
 
-    def init_comic_img(self):
+    def init_comic_img(self) -> None:
         """
         漫画の画像表示を初期化
         """
@@ -185,7 +180,7 @@ class ComicViewFrame(wx.Frame):
         self.comic_img = wx.StaticBitmap(
             self, wx.ID_ANY, bitmap, size=self.image_size)
 
-    def init_imglist_and_idxs(self):
+    def init_imglist_and_idxs(self) -> None:
         """
         漫画画像のリストとページングに使用するインデックスを初期化
         """
@@ -198,7 +193,7 @@ class ComicViewFrame(wx.Frame):
         self.idx_max = len(self.image_list) - 1
         self.idx_min = 0
 
-    def init_rate_rdbtn(self):
+    def init_rate_rdbtn(self) -> None:
         """
         レート登録用ラジオボタンを初期化
         """
