@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "comic-cluster"
+version = "0.1.0"
+description = ""
+authors = ["Your Name <you@example.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+scrapy = "^2.4.1"
+pandas = "^1.1.4"
+requests = "^2.25.0"
+pymongo = "^3.11.1"
+wxpython = "^4.1.1"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
