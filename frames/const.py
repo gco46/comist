@@ -2,6 +2,10 @@ from pathlib import Path
 import wx.lib.newevent
 import re
 import platform
+from typing import Dict, Any, Optional
+
+# DBのレコードをdictにキャストした型
+ComicDoc = Optional[Dict[str, Any]]
 
 # 漫画保存用のディレクトリパス
 COMIC_PATH = Path('data/Comics')

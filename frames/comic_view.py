@@ -1,7 +1,8 @@
 import wx
-from wx import Window, StaticBitmap, StaticText, BoxSizer, Button, Image
 import frames.const as c_
 from pathlib import Path
+# import for timehint
+from wx import Window, StaticBitmap, StaticText, BoxSizer, Button, Image
 
 
 class ComicViewFrame(wx.Frame):
@@ -9,12 +10,18 @@ class ComicViewFrame(wx.Frame):
     漫画選択後Frame
     """
 
-    def __init__(self, parent: Window, entry_info: dict, target_site: str) -> None:
+    def __init__(self,
+                 parent: Window, entry_info: c_.ComicDoc, target_site: str) -> None:
+        """
+        parent: parent window(EntryListPanel)
+        entry_info: MongoDB Document
+        target_site: kind of target site
+        """
         super().__init__(parent, wx.ID_ANY)
         self.Maximize()
         self.Bind(wx.EVT_CLOSE, self.close_frame)
         self.target_site: str = target_site
-        self.entry_info: dict = entry_info
+        self.entry_info: c_.ComicDoc = entry_info
 
         self._init_artribute()
         # ViewFrame内のPanel objectを取得
@@ -92,11 +99,11 @@ class ComicViewFrame(wx.Frame):
         if code == wx.WXK_RIGHT:
             # ページ終端でなければ次ページへ
             if self.next_page_btn_is_enabled:
-                self.draw_next_page()
+                self._draw_next_page()
         elif code == wx.WXK_LEFT:
             # ページ終端でなければ前ページへ
             if self.prev_page_btn_is_enabled:
-                self.draw_prev_page()
+                self._draw_prev_page()
 
     def _get_view_frame_obj(self) -> None:
         # CollectionPanel取得
@@ -174,7 +181,7 @@ class ComicViewFrame(wx.Frame):
         self._init_imglist_and_idxs()
         # 描画のためにBitmapオブジェクトに変換する必要あり
         image = wx.Image(str(self.image_list[0]))
-        image = self.scale_bitmap_image(image)
+        image = self._scale_bitmap_image(image)
         bitmap = image.ConvertToBitmap()
         self.comic_img: StaticBitmap = wx.StaticBitmap(
             self, wx.ID_ANY, bitmap, size=self.image_size)
@@ -206,7 +213,7 @@ class ComicViewFrame(wx.Frame):
         self.radio_box.Bind(wx.EVT_RADIOBOX, self.register_rate)
         self.radio_box.SetStringSelection(str(rate))
 
-    def scale_bitmap_image(self, img_obj: Image) -> Image:
+    def _scale_bitmap_image(self, img_obj: Image) -> Image:
         """
         標準サイズより大きい画像を縮小する
         input
@@ -296,7 +303,7 @@ class ComicViewFrame(wx.Frame):
             return
         self.entry_info = prev_entry
         # --- 再描画処理 ---
-        self.update_view_page()
+        self._update_view_page()
 
     def click_next_btn(self, event):
         """
@@ -325,9 +332,9 @@ class ComicViewFrame(wx.Frame):
             return
         self.entry_info = next_entry
         # --- 再描画処理 ---
-        self.update_view_page()
+        self._update_view_page()
 
-    def update_view_page(self):
+    def _update_view_page(self):
         self.update_info_text()
         self.update_comic_img()
         self.update_rate_rdbtn()
@@ -435,15 +442,15 @@ class ComicViewFrame(wx.Frame):
         """
         ページ送りボタン
         """
-        self.draw_next_page()
+        self._draw_next_page()
 
     def click_prev_page_btn(self, event):
         """
         ページ戻しボタン
         """
-        self.draw_prev_page()
+        self._draw_prev_page()
 
-    def draw_next_page(self):
+    def _draw_next_page(self):
         """
         ページ送り処理
         """
@@ -456,13 +463,13 @@ class ComicViewFrame(wx.Frame):
         window_list = self.layout.GetChildren()
         comic_window = window_list[1].GetWindow()
         image = wx.Image(str(self.image_list[self.comic_idx]))
-        image = self.scale_bitmap_image(image)
+        image = self._scale_bitmap_image(image)
         bitmap = image.ConvertToBitmap()
         comic_window.SetBitmap(bitmap)
         # 再描画時に画像がずれるので、Layout()をコール
         self.Layout()
 
-    def draw_prev_page(self):
+    def _draw_prev_page(self):
         """
         ページ戻し処理
         """
@@ -475,7 +482,7 @@ class ComicViewFrame(wx.Frame):
         window_list = self.layout.GetChildren()
         comic_window = window_list[1].GetWindow()
         image = wx.Image(str(self.image_list[self.comic_idx]))
-        image = self.scale_bitmap_image(image)
+        image = self._scale_bitmap_image(image)
         bitmap = image.ConvertToBitmap()
         comic_window.SetBitmap(bitmap)
         # 再描画時に画像がずれるので、Layout()をコール

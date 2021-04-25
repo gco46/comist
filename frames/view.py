@@ -1,8 +1,9 @@
 import wx
 from pymongo import MongoClient
-from pathlib import Path
 from frames.comic_view import ComicViewFrame
+from pathlib import Path
 import frames.const as c_
+from wx import Window, StaticBitmap, StaticText, BoxSizer, Button, Image
 
 
 class ViewFrame(wx.Frame):
@@ -10,7 +11,7 @@ class ViewFrame(wx.Frame):
     Viewモード選択後画面
     """
 
-    def __init__(self, parent):
+    def __init__(self, parent: Window):
         wx.Frame.__init__(self, parent, wx.ID_ANY, 'view frame')
         # 画面を最大化
         self.Maximize()
@@ -75,28 +76,28 @@ class EntryListPanel(wx.Panel):
     エントリ一覧を表示するパネル(ウィンドウ右に配置)
     """
 
-    grid_row = 3
-    grid_col = 4
-    n_item_per_page = grid_row * grid_col
-    image_path = c_.COMIC_PATH
-    no_image_path = c_.NO_IMAGE_PATH
-    img_w = c_.SUMB_WIDTH
-    img_h = c_.SUMB_HEIGHT
-    hdlr = "self.click_comic_"
+    grid_row: int = 3
+    grid_col: int = 4
+    n_item_per_page: int = grid_row * grid_col
+    image_path: Path = c_.COMIC_PATH
+    no_image_path: Path = c_.NO_IMAGE_PATH
+    img_w: int = c_.SUMB_WIDTH
+    img_h: int = c_.SUMB_HEIGHT
+    hdlr: str = "self.click_comic_"
 
-    def __init__(self, parent, id):
+    def __init__(self, parent: Window, id: int):
         super().__init__(parent, id, style=wx.BORDER_SUNKEN)
         # 変数初期化
-        self.init_attributes()
+        self._init_attributes()
         # Ctrl objectを初期化して配置
-        self.init_panel_title('Entries')
-        self.init_search_layout()
-        self.init_thumbnails()
-        self.init_paging_button()
-        self.init_page_num()
+        self._init_panel_title('Entries')
+        self._init_search_layout()
+        self._init_thumbnails()
+        self._init_paging_button()
+        self._init_page_num()
 
         # 最上位のレイアウトに入れて描画
-        self.layout = wx.BoxSizer(wx.VERTICAL)
+        self.layout: BoxSizer = wx.BoxSizer(wx.VERTICAL)
         self.layout.Add(self.title_text, flag=wx.ALIGN_CENTER)
         self.layout.Add(
             self.search_layout,
@@ -109,7 +110,7 @@ class EntryListPanel(wx.Panel):
                         flag=wx.ALIGN_CENTER | wx.TOP, border=5)
         self.SetSizer(self.layout)
 
-    def init_panel_title(self, title):
+    def _init_panel_title(self, title: str):
         """
         パネル上部のタイトル設定
         """
@@ -122,17 +123,17 @@ class EntryListPanel(wx.Panel):
         )
         self.title_text.SetFont(font_Title)
 
-    def init_attributes(self):
+    def _init_attributes(self):
         """
         ページングに使用するメンバ変数を初期化する
         """
         # エントリリストのページング用インデックス
-        self.e_list_idx = 0
+        self.e_list_idx: int = 0
         # DB検索結果格納用リスト
         # 1ページのエントリ数の空文字要素で初期化
-        self.s_result = [""] * self.n_item_per_page
+        self.s_result = [None] * self.n_item_per_page
         # 選択中のtarget site
-        self.target_site = "eromanga_night"
+        self.target_site: str = "eromanga_night"
 
     def init_rate_layout(self):
         font = wx.Font(
@@ -164,7 +165,7 @@ class EntryListPanel(wx.Panel):
         self.category_layout.Add(category_text, flag=wx.ALIGN_CENTER)
         self.category_layout.Add(self.selected_category, flag=wx.ALIGN_CENTER)
 
-    def init_search_layout(self):
+    def _init_search_layout(self):
         """
         panel上部の検索クエリ文字列を初期化
         """
@@ -182,7 +183,7 @@ class EntryListPanel(wx.Panel):
             border=60
         )
 
-    def init_thumbnails(self):
+    def _init_thumbnails(self):
         """
         サムネイル用GridSizerを初期化
         """
@@ -221,7 +222,7 @@ class EntryListPanel(wx.Panel):
             comic_img.Bind(wx.EVT_LEFT_DOWN, eval(self.hdlr + str(i)))
             title.Bind(wx.EVT_LEFT_DOWN, eval(self.hdlr + str(i)))
 
-    def init_paging_button(self):
+    def _init_paging_button(self):
         """
         ページングボタンを初期化
         """
@@ -246,7 +247,7 @@ class EntryListPanel(wx.Panel):
             border=10
         )
 
-    def init_page_num(self):
+    def _init_page_num(self):
         """
         エントリリストのページ数を初期化
         """
@@ -315,86 +316,86 @@ class EntryListPanel(wx.Panel):
     def click_comic_0(self, event):
         entry = self.s_result[self.e_list_idx * self.n_item_per_page + 0]
         # 空のエントリを選択した場合は何もしない
-        if entry == "":
+        if entry is None:
             return
-        comic_view_frame = ComicViewFrame(self, entry, self.target_site)
+        ComicViewFrame(self, entry, self.target_site)
 
     def click_comic_1(self, event):
         entry = self.s_result[self.e_list_idx * self.n_item_per_page + 1]
         # 空のエントリを選択した場合は何もしない
-        if entry == "":
+        if entry is None:
             return
-        comic_view_frame = ComicViewFrame(self, entry, self.target_site)
+        ComicViewFrame(self, entry, self.target_site)
 
     def click_comic_2(self, event):
         entry = self.s_result[self.e_list_idx * self.n_item_per_page + 2]
         # 空のエントリを選択した場合は何もしない
-        if entry == "":
+        if entry is None:
             return
-        comic_view_frame = ComicViewFrame(self, entry, self.target_site)
+        ComicViewFrame(self, entry, self.target_site)
 
     def click_comic_3(self, event):
         entry = self.s_result[self.e_list_idx * self.n_item_per_page + 3]
         # 空のエントリを選択した場合は何もしない
-        if entry == "":
+        if entry is None:
             return
-        comic_view_frame = ComicViewFrame(self, entry, self.target_site)
+        ComicViewFrame(self, entry, self.target_site)
 
     def click_comic_4(self, event):
         entry = self.s_result[self.e_list_idx * self.n_item_per_page + 4]
         # 空のエントリを選択した場合は何もしない
-        if entry == "":
+        if entry is None:
             return
-        comic_view_frame = ComicViewFrame(self, entry, self.target_site)
+        ComicViewFrame(self, entry, self.target_site)
 
     def click_comic_5(self, event):
         entry = self.s_result[self.e_list_idx * self.n_item_per_page + 5]
         # 空のエントリを選択した場合は何もしない
-        if entry == "":
+        if entry is None:
             return
-        comic_view_frame = ComicViewFrame(self, entry, self.target_site)
+        ComicViewFrame(self, entry, self.target_site)
 
     def click_comic_6(self, event):
         entry = self.s_result[self.e_list_idx * self.n_item_per_page + 6]
         # 空のエントリを選択した場合は何もしない
-        if entry == "":
+        if entry is None:
             return
-        comic_view_frame = ComicViewFrame(self, entry, self.target_site)
+        ComicViewFrame(self, entry, self.target_site)
 
     def click_comic_7(self, event):
         entry = self.s_result[self.e_list_idx * self.n_item_per_page + 7]
         # 空のエントリを選択した場合は何もしない
-        if entry == "":
+        if entry is None:
             return
-        comic_view_frame = ComicViewFrame(self, entry, self.target_site)
+        ComicViewFrame(self, entry, self.target_site)
 
     def click_comic_8(self, event):
         entry = self.s_result[self.e_list_idx * self.n_item_per_page + 8]
         # 空のエントリを選択した場合は何もしない
-        if entry == "":
+        if entry is None:
             return
-        comic_view_frame = ComicViewFrame(self, entry, self.target_site)
+        ComicViewFrame(self, entry, self.target_site)
 
     def click_comic_9(self, event):
         entry = self.s_result[self.e_list_idx * self.n_item_per_page + 9]
         # 空のエントリを選択した場合は何もしない
-        if entry == "":
+        if entry is None:
             return
-        comic_view_frame = ComicViewFrame(self, entry, self.target_site)
+        ComicViewFrame(self, entry, self.target_site)
 
     def click_comic_10(self, event):
         entry = self.s_result[self.e_list_idx * self.n_item_per_page + 10]
         # 空のエントリを選択した場合は何もしない
-        if entry == "":
+        if entry is None:
             return
-        comic_view_frame = ComicViewFrame(self, entry, self.target_site)
+        ComicViewFrame(self, entry, self.target_site)
 
     def click_comic_11(self, event):
         entry = self.s_result[self.e_list_idx * self.n_item_per_page + 11]
         # 空のエントリを選択した場合は何もしない
-        if entry == "":
+        if entry is None:
             return
-        comic_view_frame = ComicViewFrame(self, entry, self.target_site)
+        ComicViewFrame(self, entry, self.target_site)
 
     def update_entry_list(self, search_result, page=0):
         """
@@ -405,7 +406,7 @@ class EntryListPanel(wx.Panel):
         # No imageで描画用に、エントリの端数は空文字を入れる
         tmp = -(-len(self.s_result) // self.n_item_per_page) * \
             self.n_item_per_page
-        self.s_result += [""] * (tmp - len(self.s_result))
+        self.s_result += [None] * (tmp - len(self.s_result))
         # エントリリストの指定ページを描画
         self.update_thumbnail_and_title(page)
         # entry panelのページング処理を有効化
