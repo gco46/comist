@@ -1,8 +1,7 @@
 import wx
-from wx import Window
-from wx import Image as wxImg
-from pathlib import Path
+from wx import Window, StaticBitmap, StaticText, BoxSizer, Button, Image
 import frames.const as c_
+from pathlib import Path
 
 
 class ComicViewFrame(wx.Frame):
@@ -10,38 +9,38 @@ class ComicViewFrame(wx.Frame):
     漫画選択後Frame
     """
 
-    def __init__(self, parent: Window, entry_info: dict, target_site: str):
+    def __init__(self, parent: Window, entry_info: dict, target_site: str) -> None:
         super().__init__(parent, wx.ID_ANY)
         self.Maximize()
         self.Bind(wx.EVT_CLOSE, self.close_frame)
         self.target_site: str = target_site
         self.entry_info: dict = entry_info
 
-        self.init_artribute()
+        self._init_artribute()
         # ViewFrame内のPanel objectを取得
-        self.get_view_frame_obj()
+        self._get_view_frame_obj()
 
         # パネル上部の漫画情報を更新
-        self.init_info_text()
+        self._init_info_text()
 
         # レート登録用ラジオボタン追加
-        self.init_rate_rdbtn()
+        self._init_rate_rdbtn()
 
         # 連作のnext/previous ボタン追加
-        self.init_cont_work_btn()
+        self._init_cont_work_btn()
 
         # ページ送りボタン
-        self.init_paging_button()
+        self._init_paging_button()
 
         # 画像表示
-        self.init_comic_img()
+        self._init_comic_img()
 
         # キーイベントの紐付け
         self.Bind(wx.EVT_CHAR_HOOK, self.on_key)
 
         # 左側に操作パネル、右側に画像を配置
         # 要調整
-        self.layout = wx.BoxSizer(wx.HORIZONTAL)
+        self.layout: BoxSizer = wx.BoxSizer(wx.HORIZONTAL)
         left_layout = wx.BoxSizer(wx.VERTICAL)
         left_layout.Add(self.info_layout, flag=wx.ALIGN_CENTER)
         left_layout.Add(self.radio_box, flag=wx.ALIGN_CENTER |
@@ -60,7 +59,7 @@ class ComicViewFrame(wx.Frame):
         self.Centre()
         self.Show(True)
 
-    def init_artribute(self) -> None:
+    def _init_artribute(self) -> None:
         self.image_path: Path = c_.COMIC_PATH / self.target_site
         self.image_size: tuple = c_.IMAGE_SIZE
         self.image_height: int = c_.IMAGE_HEIGHT
@@ -79,7 +78,7 @@ class ComicViewFrame(wx.Frame):
         n_item_per_page: int = self.entry_panel.n_item_per_page
         max_idx: int = -(-len(search_result) // n_item_per_page) - 1
         n_page: int = self.entry_panel.e_list_idx
-        n_page: int = min(max_idx, n_page)
+        n_page = min(max_idx, n_page)
         self.entry_panel.update_entry_list(search_result, n_page)
         # 画面を閉じる
         self.Destroy()
@@ -99,7 +98,7 @@ class ComicViewFrame(wx.Frame):
             if self.prev_page_btn_is_enabled:
                 self.draw_prev_page()
 
-    def get_view_frame_obj(self) -> None:
+    def _get_view_frame_obj(self) -> None:
         # CollectionPanel取得
         self.col_panel: Window = self.GetParent().GetParent().collection_panel
         # EntryListPanel取得
@@ -109,19 +108,19 @@ class ComicViewFrame(wx.Frame):
         # ViewFrame取得
         self.view_frame: Window = self.GetParent().GetParent()
 
-    def init_info_text(self) -> None:
+    def _init_info_text(self) -> None:
         """
         エントリのタイトル、作者、カテゴリの情報を初期化
         """
         font = wx.Font(24, wx.FONTFAMILY_DEFAULT,
                        wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL)
-        self.title_text = wx.StaticText(
+        self.title_text: StaticText = wx.StaticText(
             self, wx.ID_ANY, self.entry_info["title"], style=wx.TE_CENTER)
         self.title_text.SetFont(font)
-        self.author_text = wx.StaticText(
+        self.author_text: StaticText = wx.StaticText(
             self, wx.ID_ANY, self.entry_info["author"], style=wx.TE_CENTER)
         self.author_text.SetFont(font)
-        self.category_text = wx.StaticText(
+        self.category_text: StaticText = wx.StaticText(
             self, wx.ID_ANY, self.entry_info["comic_key"], style=wx.TE_CENTER)
         self.category_text.SetFont(font)
         category_t = wx.StaticText(
@@ -132,7 +131,7 @@ class ComicViewFrame(wx.Frame):
         cat_set.Add(category_t, flag=wx.RIGHT, border=10)
         cat_set.Add(self.category_text, flag=wx.LEFT)
 
-        self.info_layout = wx.BoxSizer(wx.VERTICAL)
+        self.info_layout: BoxSizer = wx.BoxSizer(wx.VERTICAL)
         self.info_layout.Add(
             self.title_text, flag=wx.ALIGN_CENTER | wx.BOTTOM, border=7
         )
@@ -143,15 +142,15 @@ class ComicViewFrame(wx.Frame):
             cat_set, flag=wx.ALIGN_CENTER | wx.BOTTOM, border=7
         )
 
-    def init_paging_button(self) -> None:
+    def _init_paging_button(self) -> None:
         """
         ページングボタンを初期化
         """
         font = wx.Font(20, wx.FONTFAMILY_DEFAULT,
                        wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL)
-        self.next_page = wx.Button(self, wx.ID_ANY, "→", size=(400, 100))
+        self.next_page: Button = wx.Button(self, wx.ID_ANY, "→", size=(400, 100))
         self.next_page.SetFont(font)
-        self.prev_page = wx.Button(self, wx.ID_ANY, "←", size=(400, 100))
+        self.prev_page: Button = wx.Button(self, wx.ID_ANY, "←", size=(400, 100))
         self.prev_page.SetFont(font)
         self.next_page.Bind(wx.EVT_BUTTON, self.click_next_page_btn)
         self.prev_page.Bind(wx.EVT_BUTTON, self.click_prev_page_btn)
@@ -160,7 +159,7 @@ class ComicViewFrame(wx.Frame):
         self.enable_page_btn("next")
         self.disable_page_btn("prev")
 
-        self.button_layout = wx.BoxSizer(wx.HORIZONTAL)
+        self.button_layout: BoxSizer = wx.BoxSizer(wx.HORIZONTAL)
         self.button_layout.Add(
             self.prev_page, flag=wx.ALIGN_CENTER | wx.LEFT, border=20
         )
@@ -168,19 +167,19 @@ class ComicViewFrame(wx.Frame):
             self.next_page, flag=wx.ALIGN_CENTER | wx.LEFT, border=10
         )
 
-    def init_comic_img(self) -> None:
+    def _init_comic_img(self) -> None:
         """
         漫画の画像表示を初期化
         """
-        self.init_imglist_and_idxs()
+        self._init_imglist_and_idxs()
         # 描画のためにBitmapオブジェクトに変換する必要あり
         image = wx.Image(str(self.image_list[0]))
         image = self.scale_bitmap_image(image)
         bitmap = image.ConvertToBitmap()
-        self.comic_img = wx.StaticBitmap(
+        self.comic_img: StaticBitmap = wx.StaticBitmap(
             self, wx.ID_ANY, bitmap, size=self.image_size)
 
-    def init_imglist_and_idxs(self) -> None:
+    def _init_imglist_and_idxs(self) -> None:
         """
         漫画画像のリストとページングに使用するインデックスを初期化
         """
@@ -193,7 +192,7 @@ class ComicViewFrame(wx.Frame):
         self.idx_max = len(self.image_list) - 1
         self.idx_min = 0
 
-    def init_rate_rdbtn(self) -> None:
+    def _init_rate_rdbtn(self) -> None:
         """
         レート登録用ラジオボタンを初期化
         """
@@ -207,7 +206,7 @@ class ComicViewFrame(wx.Frame):
         self.radio_box.Bind(wx.EVT_RADIOBOX, self.register_rate)
         self.radio_box.SetStringSelection(str(rate))
 
-    def scale_bitmap_image(self, img_obj):
+    def scale_bitmap_image(self, img_obj: Image) -> Image:
         """
         標準サイズより大きい画像を縮小する
         input
@@ -223,8 +222,8 @@ class ComicViewFrame(wx.Frame):
         else:
             scale_width = img_obj.Width
             scale_height = img_obj.Height
-        image = img_obj.Scale(scale_width, scale_height, wx.IMAGE_QUALITY_HIGH)
-        return(image)
+        scaled_img = img_obj.Scale(scale_width, scale_height, wx.IMAGE_QUALITY_HIGH)
+        return(scaled_img)
 
     def register_rate(self, event):
         """
@@ -240,7 +239,7 @@ class ComicViewFrame(wx.Frame):
             command = {"$set": {"rate": int(selected)}}
         col.update_one(target, command)
 
-    def init_cont_work_btn(self):
+    def _init_cont_work_btn(self):
         """
         連作の次回作、前回作を切り替えるボタンの初期化
         """
@@ -351,7 +350,7 @@ class ComicViewFrame(wx.Frame):
         """
         漫画画像とインデックスを更新
         """
-        self.init_imglist_and_idxs()
+        self._init_imglist_and_idxs()
         image = wx.Image(str(self.image_list[0]))
         image = image.Scale(
             self.image_width, self.image_height, wx.IMAGE_QUALITY_HIGH)
