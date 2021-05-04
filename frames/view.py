@@ -5,6 +5,8 @@ from pathlib import Path
 import frames.const as c_
 from wx import Window, StaticBitmap, StaticText, BoxSizer, Button, Image
 
+from typing import List, Dict
+
 
 class ViewFrame(wx.Frame):
     """
@@ -25,7 +27,7 @@ class ViewFrame(wx.Frame):
                 None, 'There are no collections. Scraping first.',
                 style=wx.OK
             )
-            res = dialog.ShowModal()
+            dialog.ShowModal()
             self.Destroy()
             return
         self.collection_panel = CollectionPanel(self, wx.ID_ANY)
@@ -87,35 +89,28 @@ class EntryListPanel(wx.Panel):
 
     def __init__(self, parent: Window, id: int):
         super().__init__(parent, id, style=wx.BORDER_SUNKEN)
+        self._init_panel()
+        self._draw_panel()
+
+    def _init_panel(self):
+        """
+        パネル初期化
+        """
         # 変数初期化
         self._init_attributes()
         # Ctrl objectを初期化して配置
-        self._init_panel_title('Entries')
+        self._init_panel_title()
         self._init_search_layout()
         self._init_thumbnails()
         self._init_paging_button()
         self._init_page_num()
 
-        # 最上位のレイアウトに入れて描画
-        self.layout: BoxSizer = wx.BoxSizer(wx.VERTICAL)
-        self.layout.Add(self.title_text, flag=wx.ALIGN_CENTER)
-        self.layout.Add(
-            self.search_layout,
-            flag=wx.ALIGN_CENTER | wx.BOTTOM,
-            border=20
-        )
-        self.layout.Add(self.thumbnails, flag=wx.ALIGN_CENTER)
-        self.layout.Add(self.btn_layout, flag=wx.ALIGN_CENTER)
-        self.layout.Add(self.n_page_layout,
-                        flag=wx.ALIGN_CENTER | wx.TOP, border=5)
-        self.SetSizer(self.layout)
-
-    def _init_panel_title(self, title: str):
+    def _init_panel_title(self):
         """
         パネル上部のタイトル設定
         """
-        self.title_text = wx.StaticText(
-            self, wx.ID_ANY, title, style=wx.TE_CENTER
+        self.title_text: StaticText = wx.StaticText(
+            self, wx.ID_ANY, 'Entries', style=wx.TE_CENTER
         )
         font_Title = wx.Font(
             24, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL,
@@ -132,10 +127,13 @@ class EntryListPanel(wx.Panel):
         # DB検索結果格納用リスト
         # 1ページのエントリ数の空文字要素で初期化
         self.s_result = [None] * self.n_item_per_page
-        # 選択中のtarget site
+        # 選択中のtarget site(暫定で設定)
         self.target_site: str = "eromanga_night"
 
-    def init_rate_layout(self):
+    def _init_rate_layout(self):
+        """
+        検索対象のレート表示部を初期化
+        """
         font = wx.Font(
             18, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL,
             wx.FONTWEIGHT_NORMAL
@@ -145,10 +143,13 @@ class EntryListPanel(wx.Panel):
         )
         rate_text.SetFont(font)
 
-        self.rate_layout = wx.BoxSizer(wx.HORIZONTAL)
+        self.rate_layout: BoxSizer = wx.BoxSizer(wx.HORIZONTAL)
         self.rate_layout.Add(rate_text, flag=wx.ALIGN_CENTER)
 
-    def init_category_layout(self):
+    def _init_category_layout(self):
+        """
+        検索対象のカテゴリ表示部を初期化
+        """
         font = wx.Font(
             18, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL,
             wx.FONTWEIGHT_NORMAL
@@ -157,11 +158,11 @@ class EntryListPanel(wx.Panel):
             self, wx.ID_ANY, "Category : ", style=wx.TE_CENTER
         )
         category_text.SetFont(font)
-        self.selected_category = wx.StaticText(
+        self.selected_category: StaticText = wx.StaticText(
             self, wx.ID_ANY, "", style=wx.TE_CENTER
         )
         self.selected_category.SetFont(font)
-        self.category_layout = wx.BoxSizer(wx.HORIZONTAL)
+        self.category_layout: BoxSizer = wx.BoxSizer(wx.HORIZONTAL)
         self.category_layout.Add(category_text, flag=wx.ALIGN_CENTER)
         self.category_layout.Add(self.selected_category, flag=wx.ALIGN_CENTER)
 
@@ -169,9 +170,12 @@ class EntryListPanel(wx.Panel):
         """
         panel上部の検索クエリ文字列を初期化
         """
-        self.init_rate_layout()
-        self.init_category_layout()
-        self.search_layout = wx.BoxSizer(wx.HORIZONTAL)
+        # search_layoutはパネル上部のレート, カテゴリ表示も含むため
+        # 先にrate_layout, category_layoutを初期化する
+        self._init_rate_layout()
+        self._init_category_layout()
+
+        self.search_layout: BoxSizer = wx.BoxSizer(wx.HORIZONTAL)
         self.search_layout.Add(
             self.rate_layout,
             flag=wx.ALIGN_CENTER | wx.RIGHT | wx.LEFT,
@@ -194,8 +198,8 @@ class EntryListPanel(wx.Panel):
             16, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL,
             wx.FONTWEIGHT_NORMAL
         )
-        self.img_obj_list = []
-        self.title_obj_list = []
+        self.img_obj_list: List[StaticBitmap] = []
+        self.title_obj_list: List[StaticText] = []
         for i in range(self.n_item_per_page):
             img_title = wx.BoxSizer(wx.VERTICAL)
             title = wx.StaticText(
@@ -227,15 +231,15 @@ class EntryListPanel(wx.Panel):
         ページングボタンを初期化
         """
         # 各ボタンを初期化、配置する
-        self.next_button = wx.Button(self, wx.ID_ANY, '次へ')
+        self.next_button: Button = wx.Button(self, wx.ID_ANY, '次へ')
         self.next_button.Bind(wx.EVT_BUTTON, self.click_next_button)
-        self.previous_button = wx.Button(self, wx.ID_ANY, '前へ')
+        self.previous_button: Button = wx.Button(self, wx.ID_ANY, '前へ')
         self.previous_button.Bind(wx.EVT_BUTTON, self.click_previous_button)
         # DB検索されるまでボタンは無効化する
         self.next_button.Disable()
         self.previous_button.Disable()
 
-        self.btn_layout = wx.BoxSizer(wx.HORIZONTAL)
+        self.btn_layout: BoxSizer = wx.BoxSizer(wx.HORIZONTAL)
         self.btn_layout.Add(
             self.previous_button,
             flag=wx.ALIGN_CENTER | wx.RIGHT | wx.LEFT,
@@ -251,16 +255,16 @@ class EntryListPanel(wx.Panel):
         """
         エントリリストのページ数を初期化
         """
-        self.n_page_layout = wx.BoxSizer(wx.HORIZONTAL)
+        self.n_page_layout: BoxSizer = wx.BoxSizer(wx.HORIZONTAL)
         # page数　分子
-        self.p_numerator = wx.StaticText(
+        self.p_numerator: StaticText = wx.StaticText(
             self, wx.ID_ANY, '', style=wx.TE_CENTER
         )
         slash = wx.StaticText(
             self, wx.ID_ANY, '/', style=wx.TE_CENTER
         )
         # page数　分母
-        self.p_denominator = wx.StaticText(
+        self.p_denominator: StaticText = wx.StaticText(
             self, wx.ID_ANY, '', style=wx.TE_CENTER
         )
         # 桁数が増えるとずれるため、分子側のみ余白を多めに取る
@@ -272,6 +276,25 @@ class EntryListPanel(wx.Panel):
         self.n_page_layout.Add(
             self.p_denominator, flag=wx.ALIGN_CENTER | wx.RIGHT, border=8
         )
+
+    def _draw_panel(self):
+        """
+        レイアウトの描画
+        """
+        # 初期化した各レイアウトを
+        # 最上位のレイアウトに入れて描画
+        self.layout: BoxSizer = wx.BoxSizer(wx.VERTICAL)
+        self.layout.Add(self.title_text, flag=wx.ALIGN_CENTER)
+        self.layout.Add(
+            self.search_layout,
+            flag=wx.ALIGN_CENTER | wx.BOTTOM,
+            border=20
+        )
+        self.layout.Add(self.thumbnails, flag=wx.ALIGN_CENTER)
+        self.layout.Add(self.btn_layout, flag=wx.ALIGN_CENTER)
+        self.layout.Add(self.n_page_layout,
+                        flag=wx.ALIGN_CENTER | wx.TOP, border=5)
+        self.SetSizer(self.layout)
 
     def set_query_text(self, rate_q, ope_q):
         """
@@ -302,7 +325,7 @@ class EntryListPanel(wx.Panel):
         # ページ数更新
         self.p_numerator.SetLabel(str(self.e_list_idx + 1))
         # サムネイル、タイトル更新
-        self.update_thumbnail_and_title(self.e_list_idx)
+        self._update_thumbnail_and_title(self.e_list_idx)
 
     def click_previous_button(self, event):
         if self.e_list_idx == self.idx_min:
@@ -311,7 +334,7 @@ class EntryListPanel(wx.Panel):
         # ページ数更新
         self.p_numerator.SetLabel(str(self.e_list_idx + 1))
         # サムネイル、タイトル更新
-        self.update_thumbnail_and_title(self.e_list_idx)
+        self._update_thumbnail_and_title(self.e_list_idx)
 
     def click_comic_0(self, event):
         entry = self.s_result[self.e_list_idx * self.n_item_per_page + 0]
@@ -408,11 +431,11 @@ class EntryListPanel(wx.Panel):
             self.n_item_per_page
         self.s_result += [None] * (tmp - len(self.s_result))
         # エントリリストの指定ページを描画
-        self.update_thumbnail_and_title(page)
+        self._update_thumbnail_and_title(page)
         # entry panelのページング処理を有効化
         self.update_entry_paging(page)
 
-    def update_query_text(self, operator, rate, category):
+    def update_query_text(self, operator: str, rate: str, category: str):
         """
         パネル上部のクエリ情報を更新
         """
@@ -425,7 +448,7 @@ class EntryListPanel(wx.Panel):
         cat_text = cat_text.GetWindow()
         cat_text.SetLabel(category)
 
-    def update_thumbnail_and_title(self, idx):
+    def _update_thumbnail_and_title(self, idx: int):
         """
         漫画のサムネイルとタイトルを更新する
         空白の欄は'no image'を使用する
@@ -623,22 +646,22 @@ class SearchPanel(wx.Panel):
 
     def click_search(self, event):
         # コンボボックス、ラジオボタンの選択状態を取得
-        rate_q = self.rate_cmbbox.GetStringSelection()
-        operator_q = self.operator_cmbbox.GetStringSelection()
+        rate_q: str = self.rate_cmbbox.GetStringSelection()
+        operator_q: str = self.operator_cmbbox.GetStringSelection()
         # カテゴリのクエリを取得
-        category_q_idx = self.category_rdbox.GetSelection()
-        selected = self.GetParent().collection_panel.get_selected_col()
-        category_q = self.category_dict[selected][category_q_idx]
+        category_q_idx: int = self.category_rdbox.GetSelection()
+        selected: str = self.GetParent().collection_panel.get_selected_col()
+        category_q: str = self.category_dict[selected][category_q_idx]
         # フリーワードのクエリを取得
-        freeword_q = self.freeword_box.GetValue()
+        freeword_q: str = self.freeword_box.GetValue()
 
         # 取得した選択状態からクエリ作成、DB検索
-        self.query = self.make_query(
+        self.query: Dict = self._make_query(
             rate_q, operator_q, category_q, freeword_q)
         # rateが選択されていない場合は終了
         if self.query is None:
             return
-        search_result = self.DB_search(self.query)
+        search_result: List = self.DB_search(self.query)
         # 検索結果が0件の場合はダイアログを表示して終了
         if len(search_result) == 0:
             dialog = wx.MessageDialog(
@@ -653,24 +676,25 @@ class SearchPanel(wx.Panel):
         # EntryListPanelのエントリー一覧を更新
         self.GetParent().entry_panel.update_entry_list(search_result)
 
-    def make_query(self, rate, operator, category, freeword):
+    def _make_query(self,
+                    rate: str, operator: str, category: str, freeword: str):
         """
         Mongo DBに投げる検索クエリを作成する
         """
         query = []
-        query += self.make_category_query(category)
-        query += self.make_rate_query(rate, operator)
-        query += self.make_freeword_query(freeword)
+        query += self._make_category_query(category)
+        query += self._make_rate_query(rate, operator)
+        query += self._make_freeword_query(freeword)
         return {"$and": query}
 
-    def make_category_query(self, category):
+    def _make_category_query(self, category: str) -> List[Dict]:
         query = []
         if category != "ALL":
             query.append({"category": category})
         return query
 
-    def make_rate_query(self, rate, operator):
-        query = []
+    def _make_rate_query(self, rate: str, operator: str) -> List[Dict]:
+        query: List = []
         if rate == "":
             return query
         elif rate == "unrated":
@@ -685,7 +709,7 @@ class SearchPanel(wx.Panel):
                 query.append({"rate": rate})
         return query
 
-    def make_freeword_query(self, freeword):
+    def _make_freeword_query(self, freeword: str) -> List[Dict]:
         """
         フリーワード検索のクエリ作成
         tags, title, authorでOR検索する
