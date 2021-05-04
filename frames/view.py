@@ -126,7 +126,7 @@ class EntryListPanel(wx.Panel):
         self.e_list_idx: int = 0
         # DB検索結果格納用リスト
         # 1ページのエントリ数の空文字要素で初期化
-        self.s_result = [None] * self.n_item_per_page
+        self.s_result: List[c_.ComicDocs] = [None] * self.n_item_per_page
         # 選択中のtarget site(暫定で設定)
         self.target_site: str = "eromanga_night"
 
@@ -296,14 +296,7 @@ class EntryListPanel(wx.Panel):
                         flag=wx.ALIGN_CENTER | wx.TOP, border=5)
         self.SetSizer(self.layout)
 
-    def set_query_text(self, rate_q, ope_q):
-        """
-        クエリのレート・比較演算子をパネルに反映
-        """
-        self.operator.SetLabel(ope_q)
-        self.selected_rate.SetLabel(rate_q)
-
-    def update_entry_paging(self, idx):
+    def _update_entry_paging(self, idx: int):
         """
         エントリリストのページングを有効化・更新する
         """
@@ -312,8 +305,8 @@ class EntryListPanel(wx.Panel):
         self.previous_button.Enable()
         # インデックスを更新
         self.e_list_idx = idx
-        self.idx_max = len(self.s_result) // self.n_item_per_page - 1
-        self.idx_min = 0
+        self.idx_max: int = len(self.s_result) // self.n_item_per_page - 1
+        self.idx_min: int = 0
         # エントリリストのページ数を設定
         self.p_numerator.SetLabel(str(self.e_list_idx + 1))
         self.p_denominator.SetLabel(str(self.idx_max + 1))
@@ -420,12 +413,12 @@ class EntryListPanel(wx.Panel):
             return
         ComicViewFrame(self, entry, self.target_site)
 
-    def update_entry_list(self, search_result, page=0):
+    def update_entry_list(self, search_result: List[c_.ComicDoc], page: int = 0):
         """
         検索結果からサムネイル情報を更新
         """
-        # 検索結果をリスト化
-        self.s_result = list(search_result)
+        # 検索結果を更新
+        self.s_result = search_result
         # No imageで描画用に、エントリの端数は空文字を入れる
         tmp = -(-len(self.s_result) // self.n_item_per_page) * \
             self.n_item_per_page
@@ -433,7 +426,7 @@ class EntryListPanel(wx.Panel):
         # エントリリストの指定ページを描画
         self._update_thumbnail_and_title(page)
         # entry panelのページング処理を有効化
-        self.update_entry_paging(page)
+        self._update_entry_paging(page)
 
     def update_query_text(self, operator: str, rate: str, category: str):
         """
@@ -661,7 +654,7 @@ class SearchPanel(wx.Panel):
         # rateが選択されていない場合は終了
         if self.query is None:
             return
-        search_result: List = self.DB_search(self.query)
+        search_result: List[c_.ComicDoc] = self.DB_search(self.query)
         # 検索結果が0件の場合はダイアログを表示して終了
         if len(search_result) == 0:
             dialog = wx.MessageDialog(
@@ -729,7 +722,7 @@ class SearchPanel(wx.Panel):
 
         return [{"$and": freeword_q}]
 
-    def DB_search(self, query):
+    def DB_search(self, query: c_.ComicDoc) -> List[c_.ComicDoc]:
         col = self.GetParent().collection
         result = col.find(query)
         return list(result)
@@ -743,23 +736,25 @@ class CollectionPanel(wx.Panel):
 
     def __init__(self, parent, id):
         super().__init__(parent, id, style=wx.BORDER_SUNKEN)
-
-        self.init_panel_title('Collections')
-        self.init_radio_buttons()
-        self.init_selected_col()
-
-        self.layout = wx.BoxSizer(wx.VERTICAL)
-        self.layout.Add(self.title_text, flag=wx.ALIGN_CENTER)
-        self.layout.Add(self.radio_box, flag=wx.ALIGN_CENTER)
+        self._init_panel()
+        self._draw_panel()
 
         self.SetSizer(self.layout)
 
-    def init_panel_title(self, title):
+    def _init_panel(self):
+        """
+        パネル初期化
+        """
+        self._init_panel_title()
+        self._init_radio_buttons()
+        self._init_selected_col()
+
+    def _init_panel_title(self):
         """
         パネル上部のタイトル設定
         """
         self.title_text = wx.StaticText(
-            self, wx.ID_ANY, title, style=wx.TE_CENTER
+            self, wx.ID_ANY, 'Collections', style=wx.TE_CENTER
         )
         font_Title = wx.Font(
             24, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL,
@@ -767,7 +762,7 @@ class CollectionPanel(wx.Panel):
         )
         self.title_text.SetFont(font_Title)
 
-    def init_radio_buttons(self):
+    def _init_radio_buttons(self):
         """
         DB内のコレクション数だけラジオボタン追加
         """
@@ -781,11 +776,16 @@ class CollectionPanel(wx.Panel):
         )
         self.radio_box.SetFont(font)
 
-    def init_selected_col(self):
+    def _init_selected_col(self):
         """
         初期選択collectionをDBで開く (eromanga_night)
         """
         self.GetParent().select_collection("eromanga_night")
+
+    def _draw_panel(self):
+        self.layout = wx.BoxSizer(wx.VERTICAL)
+        self.layout.Add(self.title_text, flag=wx.ALIGN_CENTER)
+        self.layout.Add(self.radio_box, flag=wx.ALIGN_CENTER)
 
     def get_selected_col(self):
         """
