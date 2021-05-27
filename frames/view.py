@@ -34,7 +34,7 @@ class ViewFrame(wx.Frame):
         self.search_panel = SearchPanel(self, wx.ID_ANY)
         self.entry_panel = EntryListPanel(self, wx.ID_ANY)
 
-        self.layout = wx.BoxSizer(wx.HORIZONTAL)
+        self.layout: BoxSizer = wx.BoxSizer(wx.HORIZONTAL)
         self.layout.Add(self.collection_panel, 2,
                         flag=wx.EXPAND | wx.ALL, border=5)
         self.layout.Add(self.search_panel, 2,
