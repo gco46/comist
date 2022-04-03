@@ -36,20 +36,20 @@ class GetComicsSpider(scrapy.Spider):
         "front"                 # 最新のエントリから取得
     ]
     category_dict = {
-        "eromanga-night": "エロ漫画の夜",
-        "gyaru": "ギャル",
-        "hinnyu": "貧乳",
-        "jingai-kemono": "人外・獣",
-        "jk-jc": "JK・JC",
-        "jyukujyo-hitozuma": "熟女・人妻",
-        "kinshinsoukan": "近親相姦",
-        "kosupure": "コスプレ",
-        "kyonyu-binyu": "巨乳・美乳",
-        "netorare-netori": "寝取られ・寝取り",
-        "ol-sister": "OL・お姉さん",
-        "onesyota": "おねショタ",
-        "rape": "レイプ",
-        "rezu-yuri": "レズ・百合",
+        "eromanga-night-a": "エロ漫画の夜",
+        "gyaru-a": "ギャル",
+        "hinnyu-a": "貧乳",
+        "jingai-kemono-a": "人外・獣",
+        "jk-jc-a": "JK・JC",
+        "jyukujyo-hitozuma-a": "熟女・人妻",
+        "kinshinsoukan-a": "近親相姦",
+        "kosupure-a": "コスプレ",
+        "kyonyu-binyu-a": "巨乳・美乳",
+        "netorare-netori-a": "寝取られ・寝取り",
+        "ol-sister-a": "OL・お姉さん",
+        "onesyota-a": "おねショタ",
+        "rape-a": "レイプ",
+        "rezu-yuri-a": "レズ・百合",
     }
     # リクエストヘッダ情報
     headers = {
