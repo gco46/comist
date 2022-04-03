@@ -1,4 +1,4 @@
-# comic-cluster
+# comist
 
 ## Overview
 
@@ -9,7 +9,7 @@ To install dependent python libraries, run following command.
 ```
 pip install -r requirements.txt
 ```
-To launch comic-cluster, run `app.py`. 
+To launch comist, run `app.py`. 
 ```
 python app.py
 ```

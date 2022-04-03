@@ -1,4 +1,4 @@
-# ComicCluster
+# comist
 
 ## スクレイピング手順
 

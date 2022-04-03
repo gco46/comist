@@ -38,5 +38,5 @@ class MyFrame(wx.Frame):
 
 if __name__ == "__main__":
     app = wx.App()
-    MyFrame(None, -1, 'comic-cluster')
+    MyFrame(None, -1, 'comist')
     app.MainLoop()
