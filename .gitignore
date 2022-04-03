@@ -6,5 +6,4 @@ Comics/
 db/
 mongodb/
 .scrapy/
-Pipfile
-Pipfile.lock
+poetry.lock
