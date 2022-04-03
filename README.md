@@ -1,4 +1,4 @@
-# ComicCluster
+# comic-cluster
 
 ## Overview
 
@@ -9,13 +9,13 @@ To install dependent python libraries, run following command.
 ```
 pip install -r requirements.txt
 ```
-To launch ComicCluster, run `app.py`. 
+To launch comic-cluster, run `app.py`. 
 ```
 python app.py
 ```
-Run MongoDB before launch ComicCluster if you use Linux or Mac OS.  
+Run MongoDB before run `app.py`.
 
-## Supports
+## OS
 Windows and Mac OS are supported. If you use Linux, install wxpython by wheel file.
 
 details are following:
