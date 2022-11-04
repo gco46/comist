@@ -483,9 +483,9 @@ twisted-iocpsupport==1.0.2; python_full_version >= "3.6.7" and python_version >=
     --hash=sha256:3c61742cb0bc6c1ac117a7e5f422c129832f0c295af49e01d8a6066df8cfc04d \
     --hash=sha256:b435857b9efcbfc12f8c326ef0383f26416272260455bbca2cd8d8eca470c546 \
     --hash=sha256:7d972cfa8439bdcb35a7be78b7ef86d73b34b808c74be56dfa785c8a93b851bf
-twisted==22.2.0; python_full_version >= "3.6.7" and python_version >= "3.6" \
-    --hash=sha256:5c63c149eb6b8fe1e32a0215b1cef96fabdba04f705d8efb9174b1ccf5b49d49 \
-    --hash=sha256:57f32b1f6838facb8c004c89467840367ad38e9e535f8252091345dba500b4f2
+twisted==22.10.0; python_full_version >= "3.6.7" and python_version >= "3.6" \
+    --hash=sha256:32acbd40a94f5f46e7b42c109bfae2b302250945561783a8b7a059048f2d4d31 \
+    --hash=sha256:86c55f712cc5ab6f6d64e02503352464f0400f66d4f079096d744080afcccbd0
 typed-ast==1.4.3; python_version >= "3.5" \
     --hash=sha256:2068531575a125b87a41802130fa7e29f26c09a2833fea68d9a40cf33902eba6 \
     --hash=sha256:c907f561b1e83e93fad565bac5ba9c22d96a54e7ea0267c708bffe863cbe4075 \
