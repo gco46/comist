@@ -14,7 +14,7 @@ wxpython = "^4.1.1"
 mypy = "^0.812"
 flake8 = "^3.9.1"
 autopep8 = "^1.5.6"
-ipython = "^7.31.1"
+ipython = "^8.10.0"
 
 [tool.poetry.dev-dependencies]
 
